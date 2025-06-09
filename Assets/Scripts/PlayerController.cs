@@ -16,9 +16,8 @@ public class PlayerController : MonoBehaviour
     
     private void Update()
     {
-        float moveX = Input.GetAxisRaw("Horizontal");
-        Vector3 velocity = rb.velocity;
-        rb.velocity = new Vector3(moveX * moveSpeed, velocity.y, 0);
+        float moveZ = Input.GetAxisRaw("Horizontal");
+        rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y, moveZ * moveSpeed);
     
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
