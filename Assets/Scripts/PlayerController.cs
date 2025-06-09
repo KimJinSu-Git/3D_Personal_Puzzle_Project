@@ -27,7 +27,6 @@ public class PlayerController : MonoBehaviour
     
     private void OnCollisionEnter(Collision collision)
     {
-        // 땅에 닿았을 때만 점프 가능
         if (collision.contacts[0].normal.y > 0.5f)
             isGrounded = true;
     }
