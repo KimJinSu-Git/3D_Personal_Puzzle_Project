@@ -25,6 +25,8 @@ public class PlayerIdleState : PlayerBaseState
 
     public override void Enter()
     {
+        player.SetStandingCollider();
+        
         player.rb.velocity = new Vector3(0, player.rb.velocity.y, 0);
         player.GetComponent<Animator>().SetFloat(Speed, 0f);
     }
@@ -66,6 +68,8 @@ public class PlayerMoveState : PlayerBaseState
 
     public override void Enter()
     {
+        player.SetStandingCollider();
+        
         player.animator.Play("Idle_Walk_Run");
         player.animator.SetFloat(Speed, 1f);
     }
@@ -279,7 +283,7 @@ public class PlayerCrouchBlendState : PlayerBaseState
 
     public override void Enter()
     {
-        
+        player.SetCrouchCollider();
     }
 
     public override void Update()
@@ -311,7 +315,14 @@ public class PlayerCrouchBlendState : PlayerBaseState
 
         if (Input.GetKeyDown(KeyCode.C))
         {
-            stateMachine.ChangeState(player.crouchExitState);
+            if (!player.IsHeadBlocked())
+            {
+                stateMachine.ChangeState(player.crouchExitState);
+            }
+            else
+            {
+                Debug.Log("❌ 머리 위에 장애물 있어서 서지 못함");
+            }
             return;
         }
 
@@ -364,22 +375,90 @@ public class PlayerCrouchTurnState : PlayerBaseState
 
 public class PlayerCrawlTransitionState : PlayerBaseState
 {
+    private static readonly int ToCrawling = Animator.StringToHash("ToCrawling");
+
     public PlayerCrawlTransitionState(PlayerController player, PlayerStateMachine stateMachine)
         : base(player, stateMachine) { }
 
     public override void Enter()
     {
         player.rb.velocity = Vector3.zero;
-        player.animator.Play("Crouch_Crawling");
+        player.animator.SetTrigger(ToCrawling);
     }
 
     public override void Update()
     {
-        AnimatorStateInfo stateInfo = player.animator.GetCurrentAnimatorStateInfo(0);
-        if (stateInfo.IsName("Crouch_Crawling") && stateInfo.normalizedTime >= 0.95f)
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+        if (info.IsName("Crawling"))
         {
-            // 이후 CrawlState로 전환할 예정이면 여기에 구현
-            // 예: stateMachine.ChangeState(player.crawlMoveState);
+            stateMachine.ChangeState(player.crawlBlendState);
+        }
+    }
+}
+
+public class PlayerCrawlBlendState : PlayerBaseState
+{
+    private static readonly int CrawlSpeed = Animator.StringToHash("CrawlSpeed");
+    private static readonly int ToCrouch = Animator.StringToHash("ToCrouch");
+
+    public PlayerCrawlBlendState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.SetCrawlingCollider();
+        player.rb.velocity = Vector3.zero;
+    }
+
+    public override void Update()
+    {
+        float inputZ = Input.GetAxisRaw("Horizontal");
+        float speed = Mathf.Clamp(inputZ, -1f, 1f);
+
+        float yRotation = player.transform.eulerAngles.y;
+        if (Mathf.Approximately(yRotation, 180f))
+            speed *= -1f;
+        
+        float current = player.animator.GetFloat(CrawlSpeed);
+        float newSpeed = Mathf.Lerp(current, speed, Time.deltaTime * 10f);
+        player.animator.SetFloat(CrawlSpeed, newSpeed);
+
+        float crawlSpeed = player.walkSpeed * 0.3f;
+        player.rb.velocity = new Vector3(0, player.rb.velocity.y, inputZ * crawlSpeed);
+
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            if (!player.IsHeadBlocked())
+            {
+                player.rb.velocity = Vector3.zero;
+                player.animator.SetTrigger(ToCrouch);
+                stateMachine.ChangeState(player.crawlExitState);
+            }
+            else
+            {
+                Debug.Log("❌ 머리 위에 공간이 부족해 복귀 불가");
+            }
+            
+        }
+    }
+}
+
+public class PlayerCrawlExitState : PlayerBaseState
+{
+    public PlayerCrawlExitState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.velocity = Vector3.zero;
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+        if (info.IsName("Crouch"))
+        {
+            stateMachine.ChangeState(player.crouchBlendState);
         }
     }
 }

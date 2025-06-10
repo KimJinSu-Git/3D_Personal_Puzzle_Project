@@ -537,9 +537,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   walkSpeed: 2
   runSpeed: 3
-  jumpForce: 3
+  jumpForce: 4
   rb: {fileID: 0}
   animator: {fileID: 0}
+  capsule: {fileID: 0}
   isGrounded: 0
 --- !u!54 &598121825
 Rigidbody:
