@@ -52,8 +52,7 @@ public class PlayerIdleState : PlayerBaseState
         
         if (Input.GetKeyDown(KeyCode.C))
         {
-            // Idle or Move 상태에서 숙이기 진입
-            stateMachine.ChangeState(new PlayerCrouchToggleState(player, stateMachine, true));
+            stateMachine.ChangeState(player.crouchEnterState);
             return;
         }
     }
@@ -113,7 +112,7 @@ public class PlayerMoveState : PlayerBaseState
         
         if (Input.GetKeyDown(KeyCode.C))
         {
-            stateMachine.ChangeState(new PlayerCrouchToggleState(player, stateMachine, true));
+            stateMachine.ChangeState(player.crouchEnterState);
             return;
         }
     }
@@ -276,13 +275,11 @@ public class PlayerCrouchBlendState : PlayerBaseState
 {
     private static readonly int CrouchSpeed = Animator.StringToHash("CrouchSpeed");
 
-    private float previousDirection = 0f;
-
     public PlayerCrouchBlendState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
 
     public override void Enter()
     {
-        previousDirection = Mathf.Sign(Input.GetAxisRaw("Horizontal"));
+        
     }
 
     public override void Update()
@@ -290,34 +287,34 @@ public class PlayerCrouchBlendState : PlayerBaseState
         float inputZ = Input.GetAxisRaw("Horizontal");
         bool isMoving = Mathf.Abs(inputZ) > 0.1f;
 
-        // 턴 감지
-        float currentDirection = Mathf.Sign(inputZ);
-        if (isMoving && currentDirection != previousDirection && previousDirection != 0f)
+        float currentYRotation = player.transform.eulerAngles.y;
+        bool isFacingRight = Mathf.DeltaAngle(currentYRotation, 0f) < 90f;
+        bool isFacingLeft = Mathf.DeltaAngle(currentYRotation, 180f) < 90f;
+
+        bool inputRight = inputZ > 0f;
+        bool inputLeft = inputZ < 0f;
+
+        if ((isFacingRight && inputLeft) || (isFacingLeft && inputRight))
         {
-            player.crouchTurnState.SetTurnData(currentDirection);
+            player.crouchTurnState.SetTurnData(inputZ);
             stateMachine.ChangeState(player.crouchTurnState);
             return;
         }
-        previousDirection = currentDirection;
 
-        // 속도 적용
         float speedValue = isMoving ? 1f : 0f;
         float currentSpeed = player.animator.GetFloat(CrouchSpeed);
         float newSpeed = Mathf.Lerp(currentSpeed, speedValue, Time.deltaTime * 10f);
         player.animator.SetFloat(CrouchSpeed, newSpeed);
 
-        // 이동 제한 + 속도 적용
         float moveSpeed = player.walkSpeed * 0.5f;
         player.rb.velocity = new Vector3(0f, player.rb.velocity.y, inputZ * moveSpeed);
 
-        // C키로 해제
         if (Input.GetKeyDown(KeyCode.C))
         {
-            stateMachine.ChangeState(new PlayerCrouchToggleState(player, stateMachine, false));
+            stateMachine.ChangeState(player.crouchExitState);
             return;
         }
 
-        // X키로 크롤링 진입
         if (Input.GetKeyDown(KeyCode.X))
         {
             stateMachine.ChangeState(player.crawlTransitionState);
@@ -329,8 +326,10 @@ public class PlayerCrouchBlendState : PlayerBaseState
 public class PlayerCrouchTurnState : PlayerBaseState
 {
     private float targetDirection;
-    private float turnDuration = 0.6f;
+    private float turnDuration = 0.4f;
     private float elapsedTime;
+    private Quaternion fromRotation;
+    private Quaternion toRotation;
 
     public PlayerCrouchTurnState(PlayerController player, PlayerStateMachine stateMachine)
         : base(player, stateMachine) { }
@@ -344,19 +343,20 @@ public class PlayerCrouchTurnState : PlayerBaseState
     {
         elapsedTime = 0f;
         player.rb.velocity = Vector3.zero;
-        player.animator.Play("Crouch_Turn_180");
+
+        fromRotation = player.transform.rotation;
+        toRotation = targetDirection > 0f ? Quaternion.Euler(0f, 0f, 0f) : Quaternion.Euler(0f, 180f, 0f);
     }
 
     public override void Update()
     {
         elapsedTime += Time.deltaTime;
-        if (elapsedTime >= turnDuration)
-        {
-            if (targetDirection > 0f)
-                player.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-            else
-                player.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+        float t = Mathf.Clamp01(elapsedTime / turnDuration);
 
+        player.transform.rotation = Quaternion.Slerp(fromRotation, toRotation, t);
+
+        if (t >= 1f)
+        {
             stateMachine.ChangeState(player.crouchBlendState);
         }
     }

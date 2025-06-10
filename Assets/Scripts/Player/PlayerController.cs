@@ -28,6 +28,8 @@ public class PlayerController : MonoBehaviour
     public PlayerCrouchBlendState crouchBlendState;
     public PlayerCrouchTurnState crouchTurnState;
     public PlayerCrawlTransitionState crawlTransitionState;
+    public PlayerCrouchToggleState crouchEnterState;
+    public PlayerCrouchToggleState crouchExitState;
 
     private void Awake()
     {
@@ -40,6 +42,8 @@ public class PlayerController : MonoBehaviour
         jumpState = new PlayerJumpState(this, stateMachine);
         turnState = new PlayerTurnState(this, stateMachine);
         
+        crouchEnterState = new PlayerCrouchToggleState(this, stateMachine, true);
+        crouchExitState = new PlayerCrouchToggleState(this, stateMachine, false);
         crouchBlendState = new PlayerCrouchBlendState(this, stateMachine);
         crouchTurnState = new PlayerCrouchTurnState(this, stateMachine);
         crawlTransitionState = new PlayerCrawlTransitionState(this, stateMachine);
