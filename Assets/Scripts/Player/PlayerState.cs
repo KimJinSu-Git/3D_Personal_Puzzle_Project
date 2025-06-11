@@ -64,6 +64,25 @@ public class PlayerIdleState : PlayerBaseState
             return;
         }
         
+        if (player.CheckLadderInFront() && Input.GetKeyDown(KeyCode.E))
+        {
+            player.currentLadder = player.GetLadderInFront();
+            stateMachine.ChangeState(player.ladderEnterUpState);
+            return;
+        }
+        
+        if (Input.GetKeyDown(KeyCode.E) && player.CheckLadderBelowFront())
+        {
+            Transform ladder = player.GetLadderBelowFront();
+
+            if (ladder != null && player.IsFacingSameDirectionAsLadder(ladder))
+            {
+                player.currentLadder = ladder;
+                stateMachine.ChangeState(player.ladderEnterDownState);
+                return;
+            }
+        }
+        
         if (Input.GetKeyDown(KeyCode.E) && player.CheckPushableObject())
         {
             stateMachine.ChangeState(player.pushEnterState);
@@ -136,6 +155,25 @@ public class PlayerMoveState : PlayerBaseState
         {
             stateMachine.ChangeState(player.crouchEnterState);
             return;
+        }
+        
+        if (player.CheckLadderInFront() && Input.GetKeyDown(KeyCode.E))
+        {
+            player.currentLadder = player.GetLadderInFront();
+            stateMachine.ChangeState(player.ladderEnterUpState);
+            return;
+        }
+        
+        if (Input.GetKeyDown(KeyCode.E) && player.CheckLadderBelowFront())
+        {
+            Transform ladder = player.GetLadderBelowFront();
+
+            if (ladder != null && player.IsFacingSameDirectionAsLadder(ladder))
+            {
+                player.currentLadder = ladder;
+                stateMachine.ChangeState(player.ladderEnterDownState);
+                return;
+            }
         }
         
         if (Input.GetKeyDown(KeyCode.E) && player.CheckPushableObject())
@@ -314,8 +352,20 @@ public class PlayerFallState : PlayerBaseState
     
     private bool IsNearGround()
     {
-        return Physics.Raycast(player.transform.position + Vector3.up * 0.1f, 
-            Vector3.down, out RaycastHit hit, groundCheckDistance, LayerMask.GetMask("Ground"));
+        Vector3 origin = player.transform.position + Vector3.up * 0.1f;
+
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, groundCheckDistance,
+                LayerMask.GetMask("Ground", "Pushable")))
+        {
+            float angle = Vector3.Angle(hit.normal, Vector3.up);
+
+            if (angle < 30f)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
@@ -668,6 +718,211 @@ public class PlayerPushExitState : PlayerBaseState
     }
 }
 
+public class PlayerLadderEnterUpState : PlayerBaseState
+{
+    private static readonly int EnterLadderUp = Animator.StringToHash("EnterLadder_Up");
+    private bool entered = false;
+
+    public PlayerLadderEnterUpState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        entered = false;
+        player.rb.velocity = Vector3.zero;
+        player.rb.useGravity = false;
+
+        player.animator.SetTrigger(EnterLadderUp);
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+
+        if (!entered && info.IsName("Ladder_Enter_Up") && info.normalizedTime >= 0.9f)
+        {
+            entered = true;
+            stateMachine.ChangeState(player.ladderClimbState);
+        }
+    }
+
+    public override void Exit()
+    {
+        
+    }
+}
+
+public class PlayerLadderEnterDownState : PlayerBaseState
+{
+    private static readonly int EnterLadderFront = Animator.StringToHash("EnterLadder_Front");
+    private bool entered = false;
+
+    private Quaternion startRotation;
+    private Quaternion targetRotation;
+    
+    public PlayerLadderEnterDownState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        entered = false;
+        player.capsule.enabled = false;
+        player.rb.velocity = Vector3.zero;
+        player.rb.useGravity = false;
+
+        player.animator.applyRootMotion = true;
+        player.animator.SetTrigger(EnterLadderFront);
+        
+        startRotation = player.transform.rotation;
+        targetRotation = Quaternion.LookRotation(-player.currentLadder.forward);
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+
+        float t = info.normalizedTime;
+        t = Mathf.Clamp01(t);
+
+        Quaternion interpolatedRotation = Quaternion.Slerp(startRotation, targetRotation, t);
+        player.transform.rotation = interpolatedRotation;
+
+        // 종료 조건
+        if (!entered && info.IsName("Ladder_Enter_Dn") && info.normalizedTime >= 0.95f)
+        {
+            entered = true;
+
+            player.animator.applyRootMotion = false;
+            stateMachine.ChangeState(player.ladderClimbState);
+        }
+    }
+
+    public override void Exit()
+    {
+        player.capsule.enabled = true;
+        player.animator.applyRootMotion = false;
+    }
+}
+
+public class PlayerLadderClimbState : PlayerBaseState
+{
+    private static readonly int LadderSpeed = Animator.StringToHash("LadderSpeed");
+
+    public float climbSpeed = 1.5f;
+    private Transform ladderTransform;
+    private float bottomCheckDelay = 4.0f;
+    private float stateEnterTime;
+
+    public PlayerLadderClimbState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.useGravity = false;
+        player.rb.velocity = Vector3.zero;
+        ladderTransform = player.currentLadder;
+        stateEnterTime = Time.time;
+    }
+
+    public override void Update()
+    {
+        float inputY = Input.GetAxisRaw("Vertical");
+
+        float targetSpeed = Mathf.Clamp(inputY, -1f, 1f);
+        float currentSpeed = player.animator.GetFloat(LadderSpeed);
+        float lerped = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 10f);
+        player.animator.SetFloat(LadderSpeed, lerped);
+
+        if (Mathf.Abs(inputY) > 0.1f)
+        {
+            Vector3 move = ladderTransform.up * (inputY * climbSpeed * Time.deltaTime);
+            player.rb.MovePosition(player.transform.position + move);
+        }
+        
+        if (Time.time - stateEnterTime > bottomCheckDelay && player.CheckLadderBottom())
+        {
+            stateMachine.ChangeState(player.ladderExitBottomState);
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            stateMachine.ChangeState(player.ladderExitBottomState);
+        }
+    }
+
+    public override void Exit()
+    {
+        player.animator.SetFloat(LadderSpeed, 0f);
+    }
+}
+
+public class PlayerLadderExitTopState : PlayerBaseState
+{
+    private bool exited = false;
+
+    public PlayerLadderExitTopState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        exited = false;
+        player.rb.velocity = Vector3.zero;
+
+        player.capsule.enabled = false;
+        player.animator.applyRootMotion = true;
+        player.animator.Play("Ladder_Exit_Dn");
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+
+        if (!exited && info.IsName("Ladder_Exit_Dn") && info.normalizedTime >= 0.9f)
+        {
+            exited = true;
+            stateMachine.ChangeState(player.idleState);
+        }
+    }
+
+    public override void Exit()
+    {
+        player.animator.applyRootMotion = false;
+        player.capsule.enabled = true;
+        player.rb.useGravity = true;
+        player.currentLadder = null;
+    }
+}
+
+public class PlayerLadderExitBottomState : PlayerBaseState
+{
+    private bool exited = false;
+
+    public PlayerLadderExitBottomState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        exited = false;
+        player.rb.velocity = Vector3.zero;
+
+        player.animator.Play("Ladder_Exit_Up");
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+
+        if (!exited && info.IsName("Ladder_Exit_Up") && info.normalizedTime >= 0.9f)
+        {
+            exited = true;
+            stateMachine.ChangeState(player.idleState);
+        }
+    }
+
+    public override void Exit()
+    {
+        player.rb.useGravity = true;
+        player.currentLadder = null;
+    }
+}
 
 
 
