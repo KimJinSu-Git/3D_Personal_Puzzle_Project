@@ -20,6 +20,8 @@ public class PlayerController : MonoBehaviour
 
     public PlayerStateMachine stateMachine;
 
+    private Coroutine colliderLerpRoutine;
+    
     /// <summary>
     /// 상태 종류들
     /// </summary>
@@ -66,25 +68,19 @@ public class PlayerController : MonoBehaviour
         stateMachine.Update();
     }
     
-    public void SetStandingCollider()
+    public void SetStandingCollider(float duration = 0.25f)
     {
-        capsule.center = new Vector3(0f, 0.436f, 0f);
-        capsule.height = 0.8733f;
-        capsule.direction = 1;
+        LerpCollider(new Vector3(0f, 0.436f, 0f), 0.8733f, 1, duration);
     }
 
-    public void SetCrouchCollider()
+    public void SetCrouchCollider(float duration = 0.25f)
     {
-        capsule.center = new Vector3(0f, 0.3f, 0f);
-        capsule.height = 0.6f;
-        capsule.direction = 1;
+        LerpCollider(new Vector3(0f, 0.3f, 0f), 0.6f, 1, duration);
     }
 
-    public void SetCrawlingCollider()
+    public void SetCrawlingCollider(float duration = 0.25f)
     {
-        capsule.center = new Vector3(0f, 0.15f, 0f);
-        capsule.height = 0.72f;
-        capsule.direction = 2;
+        LerpCollider(new Vector3(0f, 0.15f, 0f), 0.50f, 2, duration);
     }
     
     public bool IsHeadBlocked()
@@ -110,5 +106,42 @@ public class PlayerController : MonoBehaviour
     private void OnCollisionExit(Collision collision)
     {
         isGrounded = false;
+    }
+    
+    public void LerpCollider(Vector3 targetCenter, float targetHeight, int targetDirection, float duration = 0.25f)
+    {
+        if (colliderLerpRoutine != null)
+            StopCoroutine(colliderLerpRoutine);
+
+        colliderLerpRoutine = StartCoroutine(LerpColliderCoroutine(targetCenter, targetHeight, targetDirection, duration));
+    }
+
+    private IEnumerator LerpColliderCoroutine(Vector3 targetCenter, float targetHeight, int targetDirection, float duration)
+    {
+        Vector3 startCenter = capsule.center;
+        float startHeight = capsule.height;
+
+        
+
+        float bottomY = startCenter.y - startHeight * 0.5f;
+
+        float time = 0f;
+        while (time < duration)
+        {
+            time += Time.deltaTime;
+            float t = time / duration;
+
+            float height = Mathf.Lerp(startHeight, targetHeight, t);
+            float centerY = bottomY + height * 0.5f;
+
+            capsule.height = height;
+            capsule.center = new Vector3(targetCenter.x, centerY, targetCenter.z);
+
+            yield return null;
+        }
+        
+        capsule.direction = targetDirection;
+        capsule.height = targetHeight;
+        capsule.center = targetCenter;
     }
 }

@@ -257,6 +257,11 @@ public class PlayerCrouchToggleState : PlayerBaseState
         player.animator.SetBool(IsCrouching, goingDown);
         // 공통 Trigger 발동 (Crouch_Settle 애니메이션)
         player.animator.SetTrigger(CrouchSettleTrigger);
+        
+        if (goingDown)
+            player.SetCrouchCollider(0.5f);
+        else
+            player.SetStandingCollider(1.2f);
     }
 
     public override void Update()
@@ -384,6 +389,8 @@ public class PlayerCrawlTransitionState : PlayerBaseState
     {
         player.rb.velocity = Vector3.zero;
         player.animator.SetTrigger(ToCrawling);
+        
+        player.SetCrawlingCollider(0.5f);
     }
 
     public override void Update()
@@ -451,6 +458,8 @@ public class PlayerCrawlExitState : PlayerBaseState
     public override void Enter()
     {
         player.rb.velocity = Vector3.zero;
+        
+        player.SetCrouchCollider(0.5f);
     }
 
     public override void Update()
