@@ -28,6 +28,7 @@ public class PlayerController : MonoBehaviour
     public PlayerIdleState idleState;
     public PlayerMoveState moveState;
     public PlayerJumpState jumpState;
+    public PlayerFallState fallState;
     public PlayerTurnState turnState;
     
     public PlayerCrouchBlendState crouchBlendState;
@@ -54,6 +55,7 @@ public class PlayerController : MonoBehaviour
         idleState = new PlayerIdleState(this, stateMachine);
         moveState = new PlayerMoveState(this, stateMachine);
         jumpState = new PlayerJumpState(this, stateMachine);
+        fallState = new PlayerFallState(this, stateMachine);
         turnState = new PlayerTurnState(this, stateMachine);
         
         crouchEnterState = new PlayerCrouchToggleState(this, stateMachine, true);

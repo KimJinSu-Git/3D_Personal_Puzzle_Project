@@ -52,6 +52,12 @@ public class PlayerIdleState : PlayerBaseState
             return;
         }
         
+        if (!player.isGrounded && player.rb.velocity.y < -2f)
+        {
+            stateMachine.ChangeState(player.fallState);
+            return;
+        }
+        
         if (Input.GetKeyDown(KeyCode.C))
         {
             stateMachine.ChangeState(player.crouchEnterState);
@@ -117,6 +123,12 @@ public class PlayerMoveState : PlayerBaseState
         if (Input.GetButtonDown("Jump") && player.isGrounded)
         {
             stateMachine.ChangeState(player.jumpState);
+            return;
+        }
+        
+        if (!player.isGrounded && player.rb.velocity.y < -2f)
+        {
+            stateMachine.ChangeState(player.fallState);
             return;
         }
         
@@ -238,15 +250,72 @@ public class PlayerJumpState : PlayerBaseState
 
     public override void Update()
     {
+        if (player.rb.velocity.y < -2f && !player.isGrounded)
+        {
+            stateMachine.ChangeState(player.fallState);
+            return;
+        }
+
         if (player.isGrounded)
         {
             stateMachine.ChangeState(player.idleState);
+            player.animator.Play("Idle_Walk_Run");
+            return;
+        }
+    }
+
+    public override void Exit()
+    {
+        
+    }
+}
+
+public class PlayerFallState : PlayerBaseState
+{
+    private bool playedExitAnim = false;
+    private float groundCheckDistance = 0.25f;
+    private float exitAnimDuration = 0.4f;
+    private float exitAnimTimer = 0f;
+
+    public PlayerFallState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.animator.Play("Jump_in_Place_Loop");
+        playedExitAnim = false;
+        exitAnimTimer = 0f;
+    }
+
+    public override void Update()
+    {
+        if (!playedExitAnim && IsNearGround())
+        {
+            player.animator.Play("Jump_Exit");
+            playedExitAnim = true;
+        }
+
+        if (playedExitAnim)
+        {
+            exitAnimTimer += Time.deltaTime;
+            if (exitAnimTimer >= exitAnimDuration)
+            {
+                if (Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f)
+                    stateMachine.ChangeState(player.moveState);
+                else
+                    stateMachine.ChangeState(player.idleState);
+            }
         }
     }
 
     public override void Exit()
     {
         player.animator.Play("Idle_Walk_Run");
+    }
+    
+    private bool IsNearGround()
+    {
+        return Physics.Raycast(player.transform.position + Vector3.up * 0.1f, 
+            Vector3.down, out RaycastHit hit, groundCheckDistance, LayerMask.GetMask("Ground"));
     }
 }
 
