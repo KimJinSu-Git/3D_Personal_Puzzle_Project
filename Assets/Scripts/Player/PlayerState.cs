@@ -509,23 +509,25 @@ public class PlayerPushBlendState : PlayerBaseState
     private static readonly int PushSpeed = Animator.StringToHash("Push_Speed");
 
     private PushableBox pushableBoxTarget;
-    
+
     public PlayerPushBlendState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
 
     public override void Enter()
     {
         player.rb.velocity = Vector3.zero;
-        
+
         if (Physics.Raycast(player.transform.position + Vector3.up * 0.5f, player.transform.forward, out RaycastHit hit, 0.5f, LayerMask.GetMask("Pushable")))
         {
+            Debug.Log("PushableBox 찾음");
             pushableBoxTarget = hit.collider.GetComponent<PushableBox>();
+            Debug.Log(pushableBoxTarget);
         }
     }
 
     public override void Update()
     {
         AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
-        
+
         float inputZ = Input.GetAxisRaw("Horizontal");
         float moveSpeed = player.walkSpeed * 0.5f;
 
@@ -535,35 +537,39 @@ public class PlayerPushBlendState : PlayerBaseState
         float target = Mathf.Abs(inputZ) > 0.1f ? 1f : 0f;
         float lerped = Mathf.Lerp(current, target, Time.deltaTime * 10f);
         player.animator.SetFloat(PushSpeed, lerped);
-        
-        if (info.IsName("Push_Blend") && pushableBoxTarget != null)
+
+        if (info.IsName("Push") && pushableBoxTarget != null)
         {
             Vector3 toBox = (pushableBoxTarget.transform.position - player.transform.position).normalized;
             float dot = Vector3.Dot(player.transform.forward, toBox);
 
             if (dot > 0.5f && Mathf.Abs(inputZ) > 0.1f)
             {
+                Debug.Log("미는 중");
                 Vector3 localMove = new Vector3(0f, 0f, inputZ * moveSpeed * Time.deltaTime);
                 Vector3 worldMove = player.transform.TransformDirection(localMove);
                 pushableBoxTarget.StartPush(worldMove);
             }
             else
             {
+                Debug.Log("멈춤");
                 pushableBoxTarget.StopPush();
             }
         }
 
         if (!player.CheckPushableObject())
         {
+            pushableBoxTarget?.StopPush();
             stateMachine.ChangeState(player.pushExitState);
         }
 
         if (Input.GetKeyDown(KeyCode.E))
         {
+            pushableBoxTarget?.StopPush();
             stateMachine.ChangeState(player.pushExitState);
         }
     }
-    
+
     public override void Exit()
     {
         pushableBoxTarget?.StopPush();
