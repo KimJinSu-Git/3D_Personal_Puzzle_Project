@@ -29,13 +29,19 @@ public class PlayerController : MonoBehaviour
     public PlayerMoveState moveState;
     public PlayerJumpState jumpState;
     public PlayerTurnState turnState;
+    
     public PlayerCrouchBlendState crouchBlendState;
     public PlayerCrouchTurnState crouchTurnState;
     public PlayerCrouchToggleState crouchEnterState;
     public PlayerCrouchToggleState crouchExitState;
+    
     public PlayerCrawlTransitionState crawlTransitionState;
     public PlayerCrawlBlendState crawlBlendState;
     public PlayerCrawlExitState crawlExitState;
+    
+    public PlayerPushEnterState pushEnterState;
+    public PlayerPushBlendState pushBlendState;
+    public PlayerPushExitState pushExitState;
 
     private void Awake()
     {
@@ -44,6 +50,7 @@ public class PlayerController : MonoBehaviour
         capsule = GetComponent<CapsuleCollider>();
         
         stateMachine = new PlayerStateMachine();
+        
         idleState = new PlayerIdleState(this, stateMachine);
         moveState = new PlayerMoveState(this, stateMachine);
         jumpState = new PlayerJumpState(this, stateMachine);
@@ -53,9 +60,14 @@ public class PlayerController : MonoBehaviour
         crouchExitState = new PlayerCrouchToggleState(this, stateMachine, false);
         crouchBlendState = new PlayerCrouchBlendState(this, stateMachine);
         crouchTurnState = new PlayerCrouchTurnState(this, stateMachine);
+        
         crawlTransitionState = new PlayerCrawlTransitionState(this, stateMachine);
         crawlBlendState = new PlayerCrawlBlendState(this, stateMachine);
         crawlExitState = new PlayerCrawlExitState(this, stateMachine);
+        
+        pushEnterState = new PlayerPushEnterState(this, stateMachine);
+        pushBlendState = new PlayerPushBlendState(this, stateMachine);
+        pushExitState = new PlayerPushExitState(this, stateMachine);
     }
 
     private void Start()
@@ -108,6 +120,16 @@ public class PlayerController : MonoBehaviour
         isGrounded = false;
     }
     
+    public bool CheckPushableObject()
+    {
+        Vector3 origin = transform.position + Vector3.up * 0.5f;
+        Vector3 dir = transform.forward;
+    
+        float pushCheckDistance = 0.2f;
+
+        return Physics.Raycast(origin, dir, pushCheckDistance, LayerMask.GetMask("Pushable"));
+    }
+    
     public void LerpCollider(Vector3 targetCenter, float targetHeight, int targetDirection, float duration = 0.25f)
     {
         if (colliderLerpRoutine != null)
@@ -120,9 +142,7 @@ public class PlayerController : MonoBehaviour
     {
         Vector3 startCenter = capsule.center;
         float startHeight = capsule.height;
-
         
-
         float bottomY = startCenter.y - startHeight * 0.5f;
 
         float time = 0f;

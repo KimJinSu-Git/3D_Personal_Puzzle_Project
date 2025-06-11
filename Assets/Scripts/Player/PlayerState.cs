@@ -57,6 +57,12 @@ public class PlayerIdleState : PlayerBaseState
             stateMachine.ChangeState(player.crouchEnterState);
             return;
         }
+        
+        if (Input.GetKeyDown(KeyCode.E) && player.CheckPushableObject())
+        {
+            stateMachine.ChangeState(player.pushEnterState);
+            return;
+        }
     }
 }
 
@@ -117,6 +123,12 @@ public class PlayerMoveState : PlayerBaseState
         if (Input.GetKeyDown(KeyCode.C))
         {
             stateMachine.ChangeState(player.crouchEnterState);
+            return;
+        }
+        
+        if (Input.GetKeyDown(KeyCode.E) && player.CheckPushableObject())
+        {
+            stateMachine.ChangeState(player.pushEnterState);
             return;
         }
     }
@@ -253,9 +265,7 @@ public class PlayerCrouchToggleState : PlayerBaseState
     public override void Enter()
     {
         player.rb.velocity = Vector3.zero;
-        // 방향에 따라 Bool 상태 설정
         player.animator.SetBool(IsCrouching, goingDown);
-        // 공통 Trigger 발동 (Crouch_Settle 애니메이션)
         player.animator.SetTrigger(CrouchSettleTrigger);
         
         if (goingDown)
@@ -326,7 +336,7 @@ public class PlayerCrouchBlendState : PlayerBaseState
             }
             else
             {
-                Debug.Log("❌ 머리 위에 장애물 있어서 서지 못함");
+                Debug.Log("머리 위에 장애물이 있슴다 ~");
             }
             return;
         }
@@ -443,7 +453,7 @@ public class PlayerCrawlBlendState : PlayerBaseState
             }
             else
             {
-                Debug.Log("❌ 머리 위에 공간이 부족해 복귀 불가");
+                Debug.Log("머리 위에 장애물이 있슴다 ~");
             }
             
         }
@@ -471,6 +481,119 @@ public class PlayerCrawlExitState : PlayerBaseState
         }
     }
 }
+
+public class PlayerPushEnterState : PlayerBaseState
+{
+    private static readonly int PushEnterTrigger = Animator.StringToHash("Push_Enter");
+
+    public PlayerPushEnterState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.velocity = Vector3.zero;
+        player.animator.SetTrigger(PushEnterTrigger);
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+        if (info.IsName("Push_Enter") && info.normalizedTime >= 0.9f)
+        {
+            stateMachine.ChangeState(player.pushBlendState);
+        }
+    }
+}
+
+public class PlayerPushBlendState : PlayerBaseState
+{
+    private static readonly int PushSpeed = Animator.StringToHash("Push_Speed");
+
+    private PushableBox pushableBoxTarget;
+    
+    public PlayerPushBlendState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.velocity = Vector3.zero;
+        
+        if (Physics.Raycast(player.transform.position + Vector3.up * 0.5f, player.transform.forward, out RaycastHit hit, 0.5f, LayerMask.GetMask("Pushable")))
+        {
+            pushableBoxTarget = hit.collider.GetComponent<PushableBox>();
+        }
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+        
+        float inputZ = Input.GetAxisRaw("Horizontal");
+        float moveSpeed = player.walkSpeed * 0.5f;
+
+        player.rb.velocity = new Vector3(0f, player.rb.velocity.y, inputZ * moveSpeed);
+
+        float current = player.animator.GetFloat(PushSpeed);
+        float target = Mathf.Abs(inputZ) > 0.1f ? 1f : 0f;
+        float lerped = Mathf.Lerp(current, target, Time.deltaTime * 10f);
+        player.animator.SetFloat(PushSpeed, lerped);
+        
+        if (info.IsName("Push_Blend") && pushableBoxTarget != null)
+        {
+            Vector3 toBox = (pushableBoxTarget.transform.position - player.transform.position).normalized;
+            float dot = Vector3.Dot(player.transform.forward, toBox);
+
+            if (dot > 0.5f && Mathf.Abs(inputZ) > 0.1f)
+            {
+                Vector3 localMove = new Vector3(0f, 0f, inputZ * moveSpeed * Time.deltaTime);
+                Vector3 worldMove = player.transform.TransformDirection(localMove);
+                pushableBoxTarget.StartPush(worldMove);
+            }
+            else
+            {
+                pushableBoxTarget.StopPush();
+            }
+        }
+
+        if (!player.CheckPushableObject())
+        {
+            stateMachine.ChangeState(player.pushExitState);
+        }
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            stateMachine.ChangeState(player.pushExitState);
+        }
+    }
+    
+    public override void Exit()
+    {
+        pushableBoxTarget?.StopPush();
+        pushableBoxTarget = null;
+    }
+}
+
+public class PlayerPushExitState : PlayerBaseState
+{
+    private static readonly int PushExitTrigger = Animator.StringToHash("Push_Exit");
+
+    public PlayerPushExitState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.velocity = Vector3.zero;
+        player.animator.SetTrigger(PushExitTrigger);
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+        if (info.IsName("Push_Exit") && info.normalizedTime >= 0.9f)
+        {
+            stateMachine.ChangeState(player.idleState);
+        }
+    }
+}
+
+
 
 
 
