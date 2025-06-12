@@ -124,15 +124,7 @@ public class PlayerController : MonoBehaviour
         // 머리 위에 충돌이 있으면 true
         return Physics.CheckCapsule(headCenter, topPoint, radius, LayerMask.GetMask("Default"));
     }
-
-    // private void OnCollisionEnter(Collision other)
-    // {
-    //     if (other.contacts[0].normal.y > 0.5f)
-    //     {
-    //         isGrounded = true;
-    //     }
-    // }
-
+    
     private void OnCollisionStay(Collision other)
     {
         if (other.gameObject.layer == LayerMask.NameToLayer("Ground") || other.contacts[0].normal.y > 0.5f)
@@ -166,7 +158,7 @@ public class PlayerController : MonoBehaviour
     {
         Vector3 origin = transform.position + Vector3.up * 0.5f;
         Vector3 dir = transform.forward;
-
+        
         return Physics.Raycast(origin, dir, pushCheckDistance, LayerMask.GetMask("Pushable"));
     }
     

@@ -668,15 +668,33 @@ public class PlayerPushBlendState : PlayerBaseState
 
             if (pushableDoorTarget != null && Mathf.Abs(inputZ) > 0.1f)
             {
-                pushableDoorTarget.StartPushRotation(player.transform); // ← transform 전달 필수
+                pushableDoorTarget.StartPushRotation(player.transform);
             }
         }
 
-        if (!player.CheckPushableObject())
+        if (!player.CheckPushableObject() && (pushableDoorTarget == null || !pushableDoorTarget.isBeingPushed))
         {
             pushableBoxTarget?.StopPush();
             pushableDoorTarget?.StopPush();
             stateMachine.ChangeState(player.pushExitState);
+        }
+
+        if (pushableDoorTarget != null)
+        {
+            Vector3 playerDir = player.transform.forward;
+            Vector3 doorDir = pushableDoorTarget.transform.forward;
+
+            float angle = Vector3.Angle(playerDir, doorDir);
+
+            Vector3 cross = Vector3.Cross(doorDir, playerDir);
+            float direction = Mathf.Sign(cross.y); // +1: 반시계, -1: 시계
+
+            if (Mathf.Abs(angle - 90f) < 1f && Mathf.Abs(direction) > 0.9f)
+            {
+                pushableBoxTarget?.StopPush();
+                pushableDoorTarget?.StopPush();
+                stateMachine.ChangeState(player.pushExitState);
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.E))
