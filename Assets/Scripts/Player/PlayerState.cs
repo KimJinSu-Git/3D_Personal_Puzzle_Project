@@ -16,6 +16,13 @@ public abstract class PlayerBaseState
     public virtual void Enter() { }
     public virtual void Update() { }
     public virtual void Exit() { }
+
+    protected void PosReset()
+    {
+        Vector3 pos = player.transform.position;
+        pos.x = 0f;
+        player.transform.position = pos;
+    }
 }
 
 public class PlayerIdleState : PlayerBaseState
@@ -648,7 +655,7 @@ public class PlayerPushBlendState : PlayerBaseState
         AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
 
         float inputZ = Input.GetAxisRaw("Horizontal");
-        float moveSpeed = player.walkSpeed * 0.5f;
+        float moveSpeed = player.walkSpeed * 0.35f;
 
         player.rb.velocity = new Vector3(0f, player.rb.velocity.y, inputZ * moveSpeed);
 
@@ -666,9 +673,16 @@ public class PlayerPushBlendState : PlayerBaseState
                 pushableBoxTarget.StartPush(worldMove);
             }
 
-            if (pushableDoorTarget != null && Mathf.Abs(inputZ) > 0.1f)
+            if (pushableDoorTarget != null)
             {
-                pushableDoorTarget.StartPushRotation(player.transform);
+                if (Mathf.Abs(inputZ) > 0.1f)
+                {
+                    pushableDoorTarget.StartPushRotation(player.transform);
+                }
+                else
+                {
+                    pushableDoorTarget.StopPush();
+                }
             }
         }
 
@@ -687,7 +701,7 @@ public class PlayerPushBlendState : PlayerBaseState
             float angle = Vector3.Angle(playerDir, doorDir);
 
             Vector3 cross = Vector3.Cross(doorDir, playerDir);
-            float direction = Mathf.Sign(cross.y); // +1: 반시계, -1: 시계
+            float direction = Mathf.Sign(cross.y);
 
             if (Mathf.Abs(angle - 90f) < 1f && Mathf.Abs(direction) > 0.9f)
             {
@@ -709,6 +723,7 @@ public class PlayerPushBlendState : PlayerBaseState
     {
         pushableBoxTarget?.StopPush();
         pushableDoorTarget?.StopPush();
+        PosReset();
         pushableBoxTarget = null;
         pushableDoorTarget = null;
     }
