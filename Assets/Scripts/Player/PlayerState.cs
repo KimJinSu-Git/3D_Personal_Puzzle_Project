@@ -16,6 +16,19 @@ public abstract class PlayerBaseState
     public virtual void Enter() { }
     public virtual void Update() { }
     public virtual void Exit() { }
+
+    protected void TryInteractWithDoor()
+    {
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            Debug.Log("여긴 체크했나 ?");
+            if (player.CheckDoorInFront(out DoorInteractable door))
+            {
+                stateMachine.ChangeState(new PlayerOpenDoorState(player, stateMachine, door));
+                Debug.Log("여기도 들어왔나 ? Door");
+            }
+        }
+    }
 }
 
 public class PlayerIdleState : PlayerBaseState
@@ -52,7 +65,7 @@ public class PlayerIdleState : PlayerBaseState
             return;
         }
         
-        if (!player.isGrounded && player.rb.velocity.y < -2f)
+        if (!player.isGrounded && player.rb.velocity.y < -1f)
         {
             stateMachine.ChangeState(player.fallState);
             return;
@@ -63,6 +76,8 @@ public class PlayerIdleState : PlayerBaseState
             stateMachine.ChangeState(player.crouchEnterState);
             return;
         }
+
+        TryInteractWithDoor();
         
         if (player.CheckLadderInFront() && Input.GetKeyDown(KeyCode.E))
         {
@@ -145,7 +160,7 @@ public class PlayerMoveState : PlayerBaseState
             return;
         }
         
-        if (!player.isGrounded && player.rb.velocity.y < -2f)
+        if (!player.isGrounded && player.rb.velocity.y < -1f)
         {
             stateMachine.ChangeState(player.fallState);
             return;
@@ -156,6 +171,8 @@ public class PlayerMoveState : PlayerBaseState
             stateMachine.ChangeState(player.crouchEnterState);
             return;
         }
+        
+        TryInteractWithDoor();
         
         if (player.CheckLadderInFront() && Input.GetKeyDown(KeyCode.E))
         {
@@ -288,7 +305,7 @@ public class PlayerJumpState : PlayerBaseState
 
     public override void Update()
     {
-        if (player.rb.velocity.y < -2f && !player.isGrounded)
+        if (player.rb.velocity.y < -1f && !player.isGrounded)
         {
             stateMachine.ChangeState(player.fallState);
             return;
@@ -810,7 +827,7 @@ public class PlayerLadderClimbState : PlayerBaseState
 {
     private static readonly int LadderSpeed = Animator.StringToHash("LadderSpeed");
 
-    private float climbSpeed = 1.5f; // 애니메이션 속도가 느릴 경우 보간용
+    private float climbSpeed = 1.5f;
     private float inputY;
     private float stateEnterTime;
     private float bottomCheckDelay = 4.0f;
@@ -835,11 +852,7 @@ public class PlayerLadderClimbState : PlayerBaseState
         float lerped = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 10f);
         player.animator.SetFloat(LadderSpeed, lerped);
         player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
-        // RootMotion 기반이라 직접 위치 이동 제거
-        // Vector3 move = ladderTransform.up * (inputY * climbSpeed * Time.deltaTime);
-        // player.rb.MovePosition(player.transform.position + move);
 
-        // 일정 시간 이후에만 바닥 체크 (입력하자마자 내려가는 오류 방지)
         if (Time.time - stateEnterTime > bottomCheckDelay && player.CheckLadderBottom())
         {
             stateMachine.ChangeState(player.ladderExitBottomState);
@@ -929,6 +942,76 @@ public class PlayerLadderExitBottomState : PlayerBaseState
     }
 }
 
+public class PlayerOpenDoorState : PlayerBaseState
+{
+    private static readonly int OpenDoorTrigger = Animator.StringToHash("OpenDoorTrigger");
+    private static readonly int InsideOpenTrigger = Animator.StringToHash("InsideOpenTrigger");
+    private static readonly int InsideCloseTrigger = Animator.StringToHash("InsideCloseTrigger");
+    private static readonly int OutsideOpenTrigger = Animator.StringToHash("OutsideOpenTrigger");
+    private static readonly int OutsideCloseTrigger = Animator.StringToHash("OutsideCloseTrigger");
+
+    private DoorInteractable door;
+    private bool opened = false;
+
+    public PlayerOpenDoorState(PlayerController player, PlayerStateMachine stateMachine, DoorInteractable door)
+        : base(player, stateMachine)
+    {
+        this.door = door;
+    }
+
+    public override void Enter()
+    {
+        opened = false;
+        player.capsule.enabled = false;
+        player.rb.velocity = Vector3.zero;
+        player.rb.useGravity = false;
+        player.animator.applyRootMotion = true;
+
+        switch (door.interactionType)
+        {
+            case DoorInteractable.InteractionType.Default:
+                player.animator.SetTrigger(OpenDoorTrigger);
+                door.Interact();
+                break;
+            case DoorInteractable.InteractionType.InsideOpen:
+                player.animator.SetTrigger(InsideOpenTrigger);
+                door.Interact();
+                break;
+            case DoorInteractable.InteractionType.InsideClose:
+                player.animator.SetTrigger(InsideCloseTrigger);
+                door.Interact();
+                break;
+            case DoorInteractable.InteractionType.OutsideOpen:
+                player.animator.SetTrigger(OutsideOpenTrigger);
+                door.Interact();
+                break;
+            case DoorInteractable.InteractionType.OutsideClose:
+                player.animator.SetTrigger(OutsideCloseTrigger);
+                door.Interact();
+                break;
+        }
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
+
+        if (!opened && info.normalizedTime >= 0.95f)
+        {
+            opened = true;
+            player.animator.applyRootMotion = false;
+            player.animator.Play("Idle_Walk_Run");
+            stateMachine.ChangeState(player.idleState);
+        }
+    }
+
+    public override void Exit()
+    {
+        player.rb.useGravity = true;
+        player.capsule.enabled = true;
+        player.animator.applyRootMotion = false;
+    }
+}
 
 
 
