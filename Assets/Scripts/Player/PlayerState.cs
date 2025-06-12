@@ -16,19 +16,6 @@ public abstract class PlayerBaseState
     public virtual void Enter() { }
     public virtual void Update() { }
     public virtual void Exit() { }
-
-    protected void TryInteractWithDoor()
-    {
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            Debug.Log("여긴 체크했나 ?");
-            if (player.CheckDoorInFront(out DoorInteractable door))
-            {
-                stateMachine.ChangeState(new PlayerOpenDoorState(player, stateMachine, door));
-                Debug.Log("여기도 들어왔나 ? Door");
-            }
-        }
-    }
 }
 
 public class PlayerIdleState : PlayerBaseState
@@ -76,8 +63,6 @@ public class PlayerIdleState : PlayerBaseState
             stateMachine.ChangeState(player.crouchEnterState);
             return;
         }
-
-        TryInteractWithDoor();
         
         if (player.CheckLadderInFront() && Input.GetKeyDown(KeyCode.E))
         {
@@ -171,8 +156,6 @@ public class PlayerMoveState : PlayerBaseState
             stateMachine.ChangeState(player.crouchEnterState);
             return;
         }
-        
-        TryInteractWithDoor();
         
         if (player.CheckLadderInFront() && Input.GetKeyDown(KeyCode.E))
         {
@@ -645,6 +628,7 @@ public class PlayerPushBlendState : PlayerBaseState
     private static readonly int PushSpeed = Animator.StringToHash("Push_Speed");
 
     private PushableBox pushableBoxTarget;
+    private PushableDoor pushableDoorTarget;
 
     public PlayerPushBlendState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
 
@@ -654,9 +638,8 @@ public class PlayerPushBlendState : PlayerBaseState
 
         if (Physics.Raycast(player.transform.position + Vector3.up * 0.5f, player.transform.forward, out RaycastHit hit, 0.5f, LayerMask.GetMask("Pushable")))
         {
-            Debug.Log("PushableBox 찾음");
             pushableBoxTarget = hit.collider.GetComponent<PushableBox>();
-            Debug.Log(pushableBoxTarget);
+            pushableDoorTarget = hit.collider.GetComponent<PushableDoor>();
         }
     }
 
@@ -674,34 +657,32 @@ public class PlayerPushBlendState : PlayerBaseState
         float lerped = Mathf.Lerp(current, target, Time.deltaTime * 10f);
         player.animator.SetFloat(PushSpeed, lerped);
 
-        if (info.IsName("Push") && pushableBoxTarget != null)
+        if (info.IsName("Push"))
         {
-            Vector3 toBox = (pushableBoxTarget.transform.position - player.transform.position).normalized;
-            float dot = Vector3.Dot(player.transform.forward, toBox);
-
-            if (dot > 0.5f && Mathf.Abs(inputZ) > 0.1f)
+            if (pushableBoxTarget != null && Mathf.Abs(inputZ) > 0.1f)
             {
-                Debug.Log("미는 중");
                 Vector3 localMove = new Vector3(0f, 0f, inputZ * moveSpeed * Time.deltaTime);
                 Vector3 worldMove = player.transform.TransformDirection(localMove);
                 pushableBoxTarget.StartPush(worldMove);
             }
-            else
+
+            if (pushableDoorTarget != null && Mathf.Abs(inputZ) > 0.1f)
             {
-                Debug.Log("멈춤");
-                pushableBoxTarget.StopPush();
+                pushableDoorTarget.StartPushRotation(player.transform); // ← transform 전달 필수
             }
         }
 
         if (!player.CheckPushableObject())
         {
             pushableBoxTarget?.StopPush();
+            pushableDoorTarget?.StopPush();
             stateMachine.ChangeState(player.pushExitState);
         }
 
         if (Input.GetKeyDown(KeyCode.E))
         {
             pushableBoxTarget?.StopPush();
+            pushableDoorTarget?.StopPush();
             stateMachine.ChangeState(player.pushExitState);
         }
     }
@@ -709,7 +690,9 @@ public class PlayerPushBlendState : PlayerBaseState
     public override void Exit()
     {
         pushableBoxTarget?.StopPush();
+        pushableDoorTarget?.StopPush();
         pushableBoxTarget = null;
+        pushableDoorTarget = null;
     }
 }
 
@@ -941,77 +924,5 @@ public class PlayerLadderExitBottomState : PlayerBaseState
         player.currentLadder = null;
     }
 }
-
-public class PlayerOpenDoorState : PlayerBaseState
-{
-    private static readonly int OpenDoorTrigger = Animator.StringToHash("OpenDoorTrigger");
-    private static readonly int InsideOpenTrigger = Animator.StringToHash("InsideOpenTrigger");
-    private static readonly int InsideCloseTrigger = Animator.StringToHash("InsideCloseTrigger");
-    private static readonly int OutsideOpenTrigger = Animator.StringToHash("OutsideOpenTrigger");
-    private static readonly int OutsideCloseTrigger = Animator.StringToHash("OutsideCloseTrigger");
-
-    private DoorInteractable door;
-    private bool opened = false;
-
-    public PlayerOpenDoorState(PlayerController player, PlayerStateMachine stateMachine, DoorInteractable door)
-        : base(player, stateMachine)
-    {
-        this.door = door;
-    }
-
-    public override void Enter()
-    {
-        opened = false;
-        player.capsule.enabled = false;
-        player.rb.velocity = Vector3.zero;
-        player.rb.useGravity = false;
-        player.animator.applyRootMotion = true;
-
-        switch (door.interactionType)
-        {
-            case DoorInteractable.InteractionType.Default:
-                player.animator.SetTrigger(OpenDoorTrigger);
-                door.Interact();
-                break;
-            case DoorInteractable.InteractionType.InsideOpen:
-                player.animator.SetTrigger(InsideOpenTrigger);
-                door.Interact();
-                break;
-            case DoorInteractable.InteractionType.InsideClose:
-                player.animator.SetTrigger(InsideCloseTrigger);
-                door.Interact();
-                break;
-            case DoorInteractable.InteractionType.OutsideOpen:
-                player.animator.SetTrigger(OutsideOpenTrigger);
-                door.Interact();
-                break;
-            case DoorInteractable.InteractionType.OutsideClose:
-                player.animator.SetTrigger(OutsideCloseTrigger);
-                door.Interact();
-                break;
-        }
-    }
-
-    public override void Update()
-    {
-        AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
-
-        if (!opened && info.normalizedTime >= 0.95f)
-        {
-            opened = true;
-            player.animator.applyRootMotion = false;
-            player.animator.Play("Idle_Walk_Run");
-            stateMachine.ChangeState(player.idleState);
-        }
-    }
-
-    public override void Exit()
-    {
-        player.rb.useGravity = true;
-        player.capsule.enabled = true;
-        player.animator.applyRootMotion = false;
-    }
-}
-
 
 

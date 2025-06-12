@@ -235,23 +235,6 @@ public class PlayerController : MonoBehaviour
         return Physics.Raycast(transform.position + Vector3.down * 0.1f, Vector3.down, 0.05f, LayerMask.GetMask("Ground"));
     }
     
-    public bool CheckDoorInFront(out DoorInteractable door)
-    {
-        Vector3 origin = transform.position + Vector3.up * 0.5f;
-        Vector3 dir = transform.forward;
-        float checkDistance = 0.2f;
-        Debug.DrawRay(origin, dir, Color.red, 2f);
-
-        if (Physics.Raycast(origin, dir, out RaycastHit hit, checkDistance, LayerMask.GetMask("Door")))
-        {
-            door = hit.collider.GetComponent<DoorInteractable>();
-            return door != null;
-        }
-
-        door = null;
-        return false;
-    }
-    
     public void LerpCollider(Vector3 targetCenter, float targetHeight, int targetDirection, float duration = 0.25f)
     {
         if (colliderLerpRoutine != null)
