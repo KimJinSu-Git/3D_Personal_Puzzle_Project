@@ -28,7 +28,7 @@ public class PlayerIdleState : PlayerBaseState
         player.SetStandingCollider();
         
         player.rb.velocity = new Vector3(0, player.rb.velocity.y, 0);
-        player.GetComponent<Animator>().SetFloat(Speed, 0f);
+        player.animator.SetFloat(Speed, 0f);
     }
 
     public override void Update()
@@ -294,7 +294,7 @@ public class PlayerJumpState : PlayerBaseState
             return;
         }
 
-        if (player.isGrounded)
+        if (player.isGrounded && player.rb.velocity.y == 0)
         {
             stateMachine.ChangeState(player.idleState);
             player.animator.Play("Idle_Walk_Run");
@@ -787,7 +787,6 @@ public class PlayerLadderEnterDownState : PlayerBaseState
         Quaternion interpolatedRotation = Quaternion.Slerp(startRotation, targetRotation, t);
         player.transform.rotation = interpolatedRotation;
 
-        // 종료 조건
         if (!entered && info.IsName("Ladder_Enter_Dn") && info.normalizedTime >= 0.95f)
         {
             entered = true;
@@ -799,6 +798,8 @@ public class PlayerLadderEnterDownState : PlayerBaseState
 
     public override void Exit()
     {
+        player.animator.ResetTrigger(EnterLadderFront);
+        player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
         player.capsule.enabled = true;
         player.animator.applyRootMotion = false;
     }
@@ -885,6 +886,8 @@ public class PlayerLadderExitTopState : PlayerBaseState
 
     public override void Exit()
     {
+        player.animator.ResetTrigger("Ladder_Exit_Dn");
+        player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
         player.animator.applyRootMotion = false;
         player.capsule.enabled = true;
         player.rb.useGravity = true;

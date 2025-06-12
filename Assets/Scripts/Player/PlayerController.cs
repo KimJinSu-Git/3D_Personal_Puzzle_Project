@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -94,6 +95,7 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         stateMachine.Update();
+        Debug.Log(isGrounded);
     }
     
     public void SetStandingCollider(float duration = 0.25f)
@@ -123,17 +125,28 @@ public class PlayerController : MonoBehaviour
         return Physics.CheckCapsule(headCenter, topPoint, radius, LayerMask.GetMask("Default"));
     }
 
-    private void OnCollisionEnter(Collision collision)
+    // private void OnCollisionEnter(Collision other)
+    // {
+    //     if (other.contacts[0].normal.y > 0.5f)
+    //     {
+    //         isGrounded = true;
+    //     }
+    // }
+
+    private void OnCollisionStay(Collision other)
     {
-        if (collision.contacts[0].normal.y > 0.5f)
+        if (other.gameObject.layer == LayerMask.NameToLayer("Ground"))
         {
             isGrounded = true;
         }
     }
 
-    private void OnCollisionExit(Collision collision)
+    private void OnCollisionExit(Collision other)
     {
-        isGrounded = false;
+        if (other.gameObject.layer == LayerMask.NameToLayer("Ground"))
+        {
+            isGrounded = false;
+        }
     }
     
     private void OnTriggerStay(Collider other)
@@ -159,7 +172,7 @@ public class PlayerController : MonoBehaviour
     
     public bool CheckLadderBelowFront()
     {
-        Vector3 frontOffset = transform.forward * 0.1f;
+        Vector3 frontOffset = transform.forward * 0.25f;
         Vector3 origin = transform.position + frontOffset + Vector3.up * 0.3f;
         float distance = 1.0f;
         
@@ -170,7 +183,7 @@ public class PlayerController : MonoBehaviour
     
     public Transform GetLadderBelowFront()
     {
-        Vector3 frontOffset = transform.forward * 0.1f;
+        Vector3 frontOffset = transform.forward * 0.25f;
         Vector3 origin = transform.position + frontOffset + Vector3.up * 0.3f;
         float distance = 1.0f;
 
