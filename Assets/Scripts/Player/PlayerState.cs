@@ -731,6 +731,7 @@ public class PlayerLadderEnterUpState : PlayerBaseState
         entered = false;
         player.rb.velocity = Vector3.zero;
         player.rb.useGravity = false;
+        player.capsule.enabled = false;
 
         player.animator.SetTrigger(EnterLadderUp);
     }
@@ -748,7 +749,7 @@ public class PlayerLadderEnterUpState : PlayerBaseState
 
     public override void Exit()
     {
-        
+        player.capsule.enabled = true;
     }
 }
 
@@ -809,36 +810,36 @@ public class PlayerLadderClimbState : PlayerBaseState
 {
     private static readonly int LadderSpeed = Animator.StringToHash("LadderSpeed");
 
-    public float climbSpeed = 1.5f;
-    private Transform ladderTransform;
-    private float bottomCheckDelay = 4.0f;
+    private float climbSpeed = 1.5f; // 애니메이션 속도가 느릴 경우 보간용
+    private float inputY;
     private float stateEnterTime;
+    private float bottomCheckDelay = 4.0f;
 
     public PlayerLadderClimbState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
 
     public override void Enter()
     {
-        player.rb.useGravity = false;
         player.rb.velocity = Vector3.zero;
-        ladderTransform = player.currentLadder;
+        player.rb.useGravity = false;
+        player.animator.applyRootMotion = true;
+
         stateEnterTime = Time.time;
     }
 
     public override void Update()
     {
-        float inputY = Input.GetAxisRaw("Vertical");
+        inputY = Input.GetAxisRaw("Vertical");
 
         float targetSpeed = Mathf.Clamp(inputY, -1f, 1f);
         float currentSpeed = player.animator.GetFloat(LadderSpeed);
         float lerped = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 10f);
         player.animator.SetFloat(LadderSpeed, lerped);
+        player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
+        // RootMotion 기반이라 직접 위치 이동 제거
+        // Vector3 move = ladderTransform.up * (inputY * climbSpeed * Time.deltaTime);
+        // player.rb.MovePosition(player.transform.position + move);
 
-        if (Mathf.Abs(inputY) > 0.1f)
-        {
-            Vector3 move = ladderTransform.up * (inputY * climbSpeed * Time.deltaTime);
-            player.rb.MovePosition(player.transform.position + move);
-        }
-        
+        // 일정 시간 이후에만 바닥 체크 (입력하자마자 내려가는 오류 방지)
         if (Time.time - stateEnterTime > bottomCheckDelay && player.CheckLadderBottom())
         {
             stateMachine.ChangeState(player.ladderExitBottomState);
@@ -854,6 +855,8 @@ public class PlayerLadderClimbState : PlayerBaseState
     public override void Exit()
     {
         player.animator.SetFloat(LadderSpeed, 0f);
+        player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
+        player.animator.applyRootMotion = false;
     }
 }
 
@@ -886,7 +889,6 @@ public class PlayerLadderExitTopState : PlayerBaseState
 
     public override void Exit()
     {
-        player.animator.ResetTrigger("Ladder_Exit_Dn");
         player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
         player.animator.applyRootMotion = false;
         player.capsule.enabled = true;
