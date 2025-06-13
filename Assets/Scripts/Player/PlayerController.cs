@@ -16,6 +16,8 @@ public class PlayerController : MonoBehaviour
     public Rigidbody rb;
     public Animator animator;
     public CapsuleCollider capsule;
+    public Transform visualRoot;
+    public Quaternion originalVisualRotation;
 
     [HideInInspector] public bool isGrounded;
     [HideInInspector] public Transform currentLadder;

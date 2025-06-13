@@ -6,12 +6,12 @@ public class PushableDoor : MonoBehaviour
     public float openSpeed = 90f;
     public float autoCloseDelay = 5f;
     public bool isBeingPushed = false;
-    
+
     private Quaternion closedRotation;
     private Quaternion openRotation;
-    
-    private Transform pushingPlayer;
-    
+
+    [HideInInspector] public Transform pushingPlayer;
+
     private float closeTimer = 0f;
 
     private void Start()
@@ -22,7 +22,6 @@ public class PushableDoor : MonoBehaviour
 
     private void Update()
     {
-        Debug.Log(pushingPlayer);
         if (isBeingPushed)
         {
             float angleToTarget = Quaternion.Angle(transform.localRotation, openRotation);
@@ -50,19 +49,16 @@ public class PushableDoor : MonoBehaviour
                     AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
 
                     if (info.IsName("Push"))
-                    {
                         return;
-                    }
 
                     float distance = Vector3.Distance(pushingPlayer.position, transform.position);
                     if (distance > 2f)
-                    {
                         pushingPlayer = null;
-                    }
                 }
             }
-            
+
             closeTimer += Time.deltaTime;
+
             if (closeTimer > autoCloseDelay && pushingPlayer == null)
             {
                 float angleToClosed = Quaternion.Angle(transform.localRotation, closedRotation);

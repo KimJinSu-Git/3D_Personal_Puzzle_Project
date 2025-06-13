@@ -96,6 +96,11 @@ public class PlayerIdleState : PlayerBaseState
             return;
         }
     }
+
+    public override void Exit()
+    {
+        PosReset();
+    }
 }
 
 public class PlayerMoveState : PlayerBaseState
@@ -188,6 +193,11 @@ public class PlayerMoveState : PlayerBaseState
             stateMachine.ChangeState(player.pushEnterState);
             return;
         }
+    }
+    
+    public override void Exit()
+    {
+        PosReset();
     }
 }
 
@@ -636,17 +646,23 @@ public class PlayerPushBlendState : PlayerBaseState
 
     private PushableBox pushableBoxTarget;
     private PushableDoor pushableDoorTarget;
+    private bool isVisualRotatingBack = false;
 
-    public PlayerPushBlendState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+    public PlayerPushBlendState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
 
     public override void Enter()
     {
         player.rb.velocity = Vector3.zero;
+        isVisualRotatingBack = false;
+        
+        player.originalVisualRotation = player.visualRoot.rotation;
 
         if (Physics.Raycast(player.transform.position + Vector3.up * 0.5f, player.transform.forward, out RaycastHit hit, 0.5f, LayerMask.GetMask("Pushable")))
         {
             pushableBoxTarget = hit.collider.GetComponent<PushableBox>();
             pushableDoorTarget = hit.collider.GetComponent<PushableDoor>();
+            
         }
     }
 
@@ -655,7 +671,10 @@ public class PlayerPushBlendState : PlayerBaseState
         AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
 
         float inputZ = Input.GetAxisRaw("Horizontal");
-        float moveSpeed = player.walkSpeed * 0.35f;
+        float moveSpeed = player.walkSpeed * 0.4f;
+        
+        float yRotation = player.transform.eulerAngles.y;
+        bool isFacingRight = Mathf.Approximately(yRotation, 0f);
 
         player.rb.velocity = new Vector3(0f, player.rb.velocity.y, inputZ * moveSpeed);
 
@@ -672,12 +691,31 @@ public class PlayerPushBlendState : PlayerBaseState
                 Vector3 worldMove = player.transform.TransformDirection(localMove);
                 pushableBoxTarget.StartPush(worldMove);
             }
+            else
+            {
+                pushableBoxTarget.StopPush();
+            }
 
             if (pushableDoorTarget != null)
             {
                 if (Mathf.Abs(inputZ) > 0.1f)
                 {
                     pushableDoorTarget.StartPushRotation(player.transform);
+                    
+                    if (isFacingRight)
+                    {
+                        Vector3 doorForward = pushableDoorTarget.transform.forward;
+                        doorForward.y = 0f; 
+                        Quaternion targetRot = Quaternion.LookRotation(doorForward, Vector3.up);
+                        player.visualRoot.rotation = Quaternion.Lerp(player.visualRoot.rotation, targetRot, Time.deltaTime * 4f);
+                    }
+                    else
+                    {
+                        Vector3 doorBackward = pushableDoorTarget.transform.forward * -1;
+                        doorBackward.y = 0f; 
+                        Quaternion targetRot = Quaternion.LookRotation(doorBackward, Vector3.up);
+                        player.visualRoot.rotation = Quaternion.Lerp(player.visualRoot.rotation, targetRot, Time.deltaTime * 4f);
+                    }
                 }
                 else
                 {
@@ -685,21 +723,13 @@ public class PlayerPushBlendState : PlayerBaseState
                 }
             }
         }
-
-        if (!player.CheckPushableObject() && (pushableDoorTarget == null || !pushableDoorTarget.isBeingPushed))
-        {
-            pushableBoxTarget?.StopPush();
-            pushableDoorTarget?.StopPush();
-            stateMachine.ChangeState(player.pushExitState);
-        }
-
+        
         if (pushableDoorTarget != null)
         {
             Vector3 playerDir = player.transform.forward;
             Vector3 doorDir = pushableDoorTarget.transform.forward;
 
             float angle = Vector3.Angle(playerDir, doorDir);
-
             Vector3 cross = Vector3.Cross(doorDir, playerDir);
             float direction = Mathf.Sign(cross.y);
 
@@ -709,6 +739,13 @@ public class PlayerPushBlendState : PlayerBaseState
                 pushableDoorTarget?.StopPush();
                 stateMachine.ChangeState(player.pushExitState);
             }
+        }
+
+        if (!player.CheckPushableObject() && (pushableDoorTarget == null || !pushableDoorTarget.isBeingPushed))
+        {
+            pushableBoxTarget?.StopPush();
+            pushableDoorTarget?.StopPush();
+            stateMachine.ChangeState(player.pushExitState);
         }
 
         if (Input.GetKeyDown(KeyCode.E))
@@ -723,7 +760,7 @@ public class PlayerPushBlendState : PlayerBaseState
     {
         pushableBoxTarget?.StopPush();
         pushableDoorTarget?.StopPush();
-        PosReset();
+
         pushableBoxTarget = null;
         pushableDoorTarget = null;
     }
@@ -743,9 +780,16 @@ public class PlayerPushExitState : PlayerBaseState
 
     public override void Update()
     {
+        Quaternion current = player.visualRoot.rotation;
+        Quaternion target = player.originalVisualRotation;
+
+        player.visualRoot.rotation = Quaternion.Lerp(current, target, Time.deltaTime * 5f);
+
         AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
-        if (info.IsName("Push_Exit") && info.normalizedTime >= 0.9f)
+        if (Quaternion.Angle(current, target) < 1f && info.IsName("Push_Exit") && info.normalizedTime >= 0.9f)
         {
+            Debug.Log("여기 들어왔냐?");
+            player.visualRoot.rotation = target;
             stateMachine.ChangeState(player.idleState);
         }
     }
