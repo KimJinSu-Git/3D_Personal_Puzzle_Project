@@ -301,6 +301,7 @@ public class PlayerJumpState : PlayerBaseState
 
         player.rb.velocity = new Vector3(player.rb.velocity.x, 0f, player.rb.velocity.z);
         player.rb.AddForce(Vector3.up * player.jumpForce, ForceMode.Impulse);
+        
     }
 
     public override void Update()
@@ -317,6 +318,7 @@ public class PlayerJumpState : PlayerBaseState
             player.animator.Play("Idle_Walk_Run");
             return;
         }
+        
     }
 
     public override void Exit()
@@ -685,15 +687,18 @@ public class PlayerPushBlendState : PlayerBaseState
 
         if (info.IsName("Push"))
         {
-            if (pushableBoxTarget != null && Mathf.Abs(inputZ) > 0.1f)
+            if (pushableBoxTarget != null)
             {
-                Vector3 localMove = new Vector3(0f, 0f, inputZ * moveSpeed * Time.deltaTime);
-                Vector3 worldMove = player.transform.TransformDirection(localMove);
-                pushableBoxTarget.StartPush(worldMove);
-            }
-            else
-            {
-                pushableBoxTarget.StopPush();
+                if (Mathf.Abs(inputZ) > 0.1f)
+                {
+                    Vector3 localMove = new Vector3(0f, 0f, inputZ * moveSpeed * Time.deltaTime);
+                    Vector3 worldMove = player.transform.TransformDirection(localMove);
+                    pushableBoxTarget.StartPush(worldMove);
+                }
+                else
+                {
+                    pushableBoxTarget.StopPush();
+                }
             }
 
             if (pushableDoorTarget != null)
