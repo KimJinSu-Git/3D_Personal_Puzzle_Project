@@ -19,7 +19,7 @@ public class PlayerController : MonoBehaviour
     public Transform visualRoot;
     public Quaternion originalVisualRotation;
 
-    [HideInInspector] public bool isGrounded;
+    public bool isGrounded;
     [HideInInspector] public Transform currentLadder;
 
     public PlayerStateMachine stateMachine;
@@ -34,6 +34,7 @@ public class PlayerController : MonoBehaviour
     public PlayerMoveState moveState;
     public PlayerJumpState jumpState;
     public PlayerFallState fallState;
+    public PlayerDeathState deathState;
     public PlayerTurnState turnState;
     
     public PlayerCrouchBlendState crouchBlendState;
@@ -67,6 +68,7 @@ public class PlayerController : MonoBehaviour
         moveState = new PlayerMoveState(this, stateMachine);
         jumpState = new PlayerJumpState(this, stateMachine);
         fallState = new PlayerFallState(this, stateMachine);
+        deathState = new PlayerDeathState(this, stateMachine);
         turnState = new PlayerTurnState(this, stateMachine);
         
         crouchEnterState = new PlayerCrouchToggleState(this, stateMachine, true);
@@ -113,6 +115,11 @@ public class PlayerController : MonoBehaviour
     public void SetCrawlingCollider(float duration = 0.25f)
     {
         LerpCollider(new Vector3(0f, 0.15f, 0f), 0.50f, 2, duration);
+    }
+
+    public void SetDeathCollider(float duration = 0.25f)
+    {
+        LerpCollider(new Vector3(0f, 0.436f, 0f), 0.8733f, 2, duration);
     }
     
     public bool IsHeadBlocked()

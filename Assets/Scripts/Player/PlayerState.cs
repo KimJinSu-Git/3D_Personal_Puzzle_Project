@@ -157,7 +157,7 @@ public class PlayerMoveState : PlayerBaseState
             return;
         }
         
-        if (!player.isGrounded && player.rb.velocity.y < -1f)
+        if (player.rb.velocity.y < -1f)
         {
             stateMachine.ChangeState(player.fallState);
             return;
@@ -306,7 +306,7 @@ public class PlayerJumpState : PlayerBaseState
 
     public override void Update()
     {
-        if (player.rb.velocity.y < -1f && !player.isGrounded)
+        if (player.rb.velocity.y < -1f)
         {
             stateMachine.ChangeState(player.fallState);
             return;
@@ -319,6 +319,12 @@ public class PlayerJumpState : PlayerBaseState
             return;
         }
         
+        if (player.CheckLadderInFront() && Input.GetKeyDown(KeyCode.E))
+        {
+            player.currentLadder = player.GetLadderInFront();
+            stateMachine.ChangeState(player.ladderEnterUpState);
+            return;
+        }
     }
 
     public override void Exit()
@@ -333,6 +339,10 @@ public class PlayerFallState : PlayerBaseState
     private float groundCheckDistance = 0.25f;
     private float exitAnimDuration = 0.4f;
     private float exitAnimTimer = 0f;
+    
+    private float fallStartY;
+    private float fallEndY;
+    private float deathFallThreshold = 7f;
 
     public PlayerFallState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
 
@@ -341,6 +351,8 @@ public class PlayerFallState : PlayerBaseState
         player.animator.Play("Jump_in_Place_Loop");
         playedExitAnim = false;
         exitAnimTimer = 0f;
+        
+        fallStartY = player.transform.position.y;
     }
 
     public override void Update()
@@ -380,11 +392,67 @@ public class PlayerFallState : PlayerBaseState
 
             if (angle < 30f)
             {
+                // 착지 위치 기록
+                fallEndY = hit.point.y;
+
+                // 낙하 높이 계산
+                float fallDistance = fallStartY - fallEndY;
+
+                if (fallDistance >= deathFallThreshold)
+                {
+                    Debug.Log("높은 곳에서 떨어져 사망!");
+                    stateMachine.ChangeState(player.deathState);
+                    return false;
+                }
+
                 return true;
             }
         }
 
         return false;
+    }
+}
+
+public class PlayerDeathState : PlayerBaseState
+{
+    private static readonly int DeathFwd = Animator.StringToHash("Death_Fwd");
+    private float deathTimer = 0f;
+    private float respawnDelay = 5f;
+    private bool respawned = false;
+    public PlayerDeathState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+    
+    public override void Enter()
+    {
+        player.animator.SetTrigger(DeathFwd);
+        player.rb.velocity = Vector3.zero;
+        deathTimer = 0f;
+        respawned = false;
+        player.SetDeathCollider(0.5f);
+    }
+
+    public override void Update()
+    {
+        deathTimer += Time.deltaTime;
+
+        if (!respawned && deathTimer >= respawnDelay)
+        {
+            RespawnPlayer();
+            respawned = true;
+        }
+    }
+
+    public override void Exit()
+    {
+        player.animator.ResetTrigger(DeathFwd);
+        player.SetStandingCollider(0.5f);
+    }
+
+    private void RespawnPlayer()
+    {
+        Vector3 respawnPos = PlayerRespawnManager.Instance.GetRespawnPoint();
+        player.transform.position = respawnPos;
+
+        stateMachine.ChangeState(player.idleState);
     }
 }
 
@@ -814,8 +882,9 @@ public class PlayerLadderEnterUpState : PlayerBaseState
         player.rb.velocity = Vector3.zero;
         player.rb.useGravity = false;
         player.capsule.enabled = false;
-
-        player.animator.SetTrigger(EnterLadderUp);
+        
+        player.animator.Play("Ladder_Enter_Up");
+        // player.animator.SetTrigger(EnterLadderUp);
     }
 
     public override void Update()
@@ -894,8 +963,6 @@ public class PlayerLadderClimbState : PlayerBaseState
 
     private float climbSpeed = 1.5f;
     private float inputY;
-    private float stateEnterTime;
-    private float bottomCheckDelay = 4.0f;
 
     public PlayerLadderClimbState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
 
@@ -904,8 +971,6 @@ public class PlayerLadderClimbState : PlayerBaseState
         player.rb.velocity = Vector3.zero;
         player.rb.useGravity = false;
         player.animator.applyRootMotion = true;
-
-        stateEnterTime = Time.time;
     }
 
     public override void Update()
@@ -918,7 +983,7 @@ public class PlayerLadderClimbState : PlayerBaseState
         player.animator.SetFloat(LadderSpeed, lerped);
         player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
 
-        if (Time.time - stateEnterTime > bottomCheckDelay && player.CheckLadderBottom())
+        if (inputY < -0.1f && player.CheckLadderBottom())
         {
             stateMachine.ChangeState(player.ladderExitBottomState);
             return;
