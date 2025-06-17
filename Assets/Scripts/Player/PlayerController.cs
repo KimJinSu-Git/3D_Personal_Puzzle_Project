@@ -11,6 +11,7 @@ public class PlayerController : MonoBehaviour
     public float walkSpeed = 2f;
     public float runSpeed = 3f;
     public float jumpForce = 3f;
+    public float swimSpeed = 2.5f;
 
     [Header("구성 요소")]
     public Rigidbody rb;
@@ -20,12 +21,19 @@ public class PlayerController : MonoBehaviour
     public Quaternion originalVisualRotation;
 
     public bool isGrounded;
+    public bool isFacingRight = true;
+    public Vector3 lastFallVelocity;
     [HideInInspector] public Transform currentLadder;
 
     public PlayerStateMachine stateMachine;
 
     private Coroutine colliderLerpRoutine;
     private float pushCheckDistance = 0.2f;
+    private bool isInWater = false;
+    
+    public float? waterSurfaceY = null;
+    public float underwaterTime = 0f;
+    public float maxUnderwaterTime = 8f;
     
     /// <summary>
     /// 상태 종류들
@@ -55,6 +63,13 @@ public class PlayerController : MonoBehaviour
     public PlayerLadderClimbState ladderClimbState;
     public PlayerLadderExitTopState ladderExitTopState;
     public PlayerLadderExitBottomState ladderExitBottomState;
+    
+    public PlayerWaterImpactState  waterImpactState;
+    public PlayerSwimSurfaceState swimSurfaceState;
+    public PlayerSwimTurnState swimTurnState;
+    public PlayerUnderwaterSwimState  underwaterSwimState;
+    public PlayerUnderwaterTurnState underwaterTurnState;
+    public PlayerDrowningState drowningState;
     
     private void Awake()
     {
@@ -89,6 +104,13 @@ public class PlayerController : MonoBehaviour
         ladderClimbState = new PlayerLadderClimbState(this, stateMachine);
         ladderExitTopState = new PlayerLadderExitTopState(this, stateMachine);
         ladderExitBottomState = new PlayerLadderExitBottomState(this, stateMachine);
+
+        waterImpactState = new PlayerWaterImpactState(this, stateMachine);
+        swimSurfaceState = new PlayerSwimSurfaceState(this, stateMachine);
+        swimTurnState = new PlayerSwimTurnState(this, stateMachine);
+        underwaterSwimState = new PlayerUnderwaterSwimState(this, stateMachine);
+        underwaterTurnState = new PlayerUnderwaterTurnState(this, stateMachine);
+        drowningState = new PlayerDrowningState(this, stateMachine);
     }
 
     private void Start()
@@ -99,7 +121,7 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         stateMachine.Update();
-        Debug.Log(isGrounded);
+        Debug.Log(stateMachine.CurrentState);
     }
     
     public void SetStandingCollider(float duration = 0.25f)
@@ -149,6 +171,15 @@ public class PlayerController : MonoBehaviour
             isGrounded = false;
         }
     }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.layer == LayerMask.NameToLayer("Water"))
+        {
+            isInWater = false;
+            Debug.Log("🌊 물에서 나옴");
+        }
+    }
     
     private void OnTriggerStay(Collider other)
     {
@@ -161,6 +192,21 @@ public class PlayerController : MonoBehaviour
                 stateMachine.ChangeState(ladderExitTopState);
             }
         }
+
+        if (other.gameObject.layer == LayerMask.NameToLayer("Water") && !isInWater)
+        {
+            Debug.Log("🌊 물에 들어감");
+            isInWater = true;
+
+            Collider waterCollider = other.GetComponent<Collider>();
+            if (waterCollider != null)
+            {
+                waterSurfaceY = waterCollider.bounds.max.y;
+                Debug.Log("수면 높이: " + waterSurfaceY);
+            }
+
+            stateMachine.ChangeState(waterImpactState);
+        }
     }
     
     public bool CheckPushableObject()
@@ -171,6 +217,10 @@ public class PlayerController : MonoBehaviour
         return Physics.Raycast(origin, dir, pushCheckDistance, LayerMask.GetMask("Pushable"));
     }
     
+    /// <summary>
+    /// 사다리 관련 함수들
+    /// </summary>
+    /// <returns></returns>
     public bool CheckLadderBelowFront()
     {
         Vector3 frontOffset = transform.forward * 0.25f;
@@ -181,7 +231,6 @@ public class PlayerController : MonoBehaviour
 
         return Physics.Raycast(origin, Vector3.down, out RaycastHit hit, distance, LayerMask.GetMask("Ladder"));
     }
-    
     public Transform GetLadderBelowFront()
     {
         Vector3 frontOffset = transform.forward * 0.25f;
@@ -195,7 +244,6 @@ public class PlayerController : MonoBehaviour
 
         return null;
     }
-    
     public bool IsFacingSameDirectionAsLadder(Transform ladder)
     {
         Vector3 playerForward = transform.forward;
@@ -205,7 +253,6 @@ public class PlayerController : MonoBehaviour
 
         return dot > 0.8f;
     }
-    
     public bool CheckLadderInFront()
     {
         Vector3 origin = transform.position + Vector3.up * 0.5f;
@@ -217,7 +264,6 @@ public class PlayerController : MonoBehaviour
         }
         return false;
     }
-    
     public Transform GetLadderInFront()
     {
         Vector3 origin = transform.position + Vector3.up * 0.5f;
@@ -230,12 +276,40 @@ public class PlayerController : MonoBehaviour
 
         return null;
     }
-
     public bool CheckLadderBottom()
     {
         return Physics.Raycast(transform.position + Vector3.down * 0.1f, Vector3.down, 0.05f, LayerMask.GetMask("Ground"));
     }
+    /// <summary>
+    /// 물 관련 함수들
+    /// </summary>
+    /// <param name="y"></param>
+    public void SetWaterSurfaceY(float y)
+    {
+        waterSurfaceY = y;
+    }
+    public void ClearWaterSurfaceY()
+    {
+        waterSurfaceY = null;
+    }
+    public bool IsSubmerged()
+    {
+        if (waterSurfaceY.HasValue)
+            return transform.position.y < waterSurfaceY.Value - 0.5f;
+        return false;
+    }
+    public bool IsInWater()
+    {
+        return waterSurfaceY.HasValue;
+    }
     
+    /// <summary>
+    /// 콜라이더 보간 함수와 코루틴
+    /// </summary>
+    /// <param name="targetCenter"></param>
+    /// <param name="targetHeight"></param>
+    /// <param name="targetDirection"></param>
+    /// <param name="duration"></param>
     public void LerpCollider(Vector3 targetCenter, float targetHeight, int targetDirection, float duration = 0.25f)
     {
         if (colliderLerpRoutine != null)
@@ -243,7 +317,6 @@ public class PlayerController : MonoBehaviour
 
         colliderLerpRoutine = StartCoroutine(LerpColliderCoroutine(targetCenter, targetHeight, targetDirection, duration));
     }
-
     private IEnumerator LerpColliderCoroutine(Vector3 targetCenter, float targetHeight, int targetDirection, float duration)
     {
         Vector3 startCenter = capsule.center;

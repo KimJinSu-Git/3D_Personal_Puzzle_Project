@@ -23,6 +23,14 @@ public abstract class PlayerBaseState
         pos.x = 0f;
         player.transform.position = pos;
     }
+    
+    protected void RespawnPlayer()
+    {
+        Vector3 respawnPos = PlayerRespawnManager.Instance.GetRespawnPoint();
+        player.transform.position = respawnPos;
+
+        stateMachine.ChangeState(player.idleState);
+    }
 }
 
 public class PlayerIdleState : PlayerBaseState
@@ -357,6 +365,13 @@ public class PlayerFallState : PlayerBaseState
 
     public override void Update()
     {
+        if (player.IsInWater())
+        {
+            player.lastFallVelocity = player.rb.velocity;
+            stateMachine.ChangeState(player.waterImpactState);
+            return;
+        }
+        
         if (!playedExitAnim && IsNearGround())
         {
             player.animator.Play("Jump_Exit");
@@ -392,10 +407,8 @@ public class PlayerFallState : PlayerBaseState
 
             if (angle < 30f)
             {
-                // 착지 위치 기록
                 fallEndY = hit.point.y;
 
-                // 낙하 높이 계산
                 float fallDistance = fallStartY - fallEndY;
 
                 if (fallDistance >= deathFallThreshold)
@@ -445,14 +458,6 @@ public class PlayerDeathState : PlayerBaseState
     {
         player.animator.ResetTrigger(DeathFwd);
         player.SetStandingCollider(0.5f);
-    }
-
-    private void RespawnPlayer()
-    {
-        Vector3 respawnPos = PlayerRespawnManager.Instance.GetRespawnPoint();
-        player.transform.position = respawnPos;
-
-        stateMachine.ChangeState(player.idleState);
     }
 }
 
@@ -1072,4 +1077,333 @@ public class PlayerLadderExitBottomState : PlayerBaseState
     }
 }
 
+public class PlayerWaterImpactState : PlayerBaseState
+{
+    private float impactSpeed;
+    private float maxDiveDepth = 2.5f; // 깊게 들어갈수록 현실감 ↑
+    private float timer = 0f;
+    private float sinkDuration = 0.9f; // 잠기는 시간
+    private Vector3 startPos;
+    private Vector3 targetPos;
 
+    public PlayerWaterImpactState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.useGravity = false;
+
+        impactSpeed = Mathf.Abs(player.lastFallVelocity.y);
+        float diveDepth = Mathf.Clamp(impactSpeed * 0.1f, 0.8f, maxDiveDepth);
+
+        startPos = player.transform.position;
+        targetPos = startPos - new Vector3(0, diveDepth, 0);
+
+        timer = 0f;
+
+        player.animator.CrossFade("Dive_under", 0.2f);
+    }
+
+    public override void Update()
+    {
+        timer += Time.deltaTime;
+        float t = Mathf.Clamp01(timer / sinkDuration);
+
+        player.transform.position = Vector3.Lerp(startPos, targetPos, t);
+
+        if (timer >= sinkDuration)
+        {
+            if (player.waterSurfaceY.HasValue)
+            {
+                bool isSubmerged = player.transform.position.y < player.waterSurfaceY.Value;
+                
+                Debug.Log(isSubmerged);
+                Debug.Log(player.transform.position.y);
+                if (isSubmerged)
+                    stateMachine.ChangeState(player.underwaterSwimState);
+                else
+                    stateMachine.ChangeState(player.swimSurfaceState);
+            }
+        }
+    }
+
+    public override void Exit()
+    {
+        player.rb.velocity = Vector3.zero;
+    }
+}
+
+public class PlayerSwimSurfaceState : PlayerBaseState
+{
+    private static readonly int SwimSpeed = Animator.StringToHash("SwimSpeed");
+    private static readonly int SwimTurn180 = Animator.StringToHash("SwimTurn180");
+
+    private float currentSpeed = 0f;
+    private float targetSpeed = 0f;
+
+    private int lastFacingDirection = 1;
+
+    public PlayerSwimSurfaceState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.velocity = Vector3.zero;
+        player.rb.useGravity = false;
+        player.underwaterTime = 0f;
+        currentSpeed = 0f;
+        lastFacingDirection = player.isFacingRight ? 1 : -1;
+        player.animator.Play("SwimSurface");
+    }
+
+    public override void Update()
+    {
+        float input = Input.GetAxisRaw("Horizontal");
+        targetSpeed = Mathf.Abs(input);
+        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 5f);
+        player.animator.SetFloat(SwimSpeed, currentSpeed);
+
+        Vector3 moveDir = new Vector3(0f, 0f, input);
+        player.rb.velocity = moveDir * player.swimSpeed;
+
+        if (player.isFacingRight)
+        {
+            
+        }
+
+        if (input != 0)
+        {
+            int currentDir = input > 0 ? 1 : -1;
+            if (currentDir != lastFacingDirection)
+            {
+                player.swimTurnState.SetTurnData(currentDir);
+                stateMachine.ChangeState(player.swimTurnState);
+            }
+        }
+
+        if (Input.GetAxisRaw("Vertical") < -0.1f)
+        {
+            stateMachine.ChangeState(player.underwaterSwimState);
+        }
+
+        if (!player.IsInWater())
+        {
+            stateMachine.ChangeState(player.idleState);
+        }
+    }
+
+    public override void Exit()
+    {
+        player.animator.SetFloat(SwimSpeed, 0f);
+        player.rb.velocity = Vector3.zero;
+    }
+}
+
+public class PlayerSwimTurnState : PlayerBaseState
+{
+    private Quaternion fromRotation;
+    private Quaternion toRotation;
+    private float rotationDuration = 0.3f;
+    private float timer = 0f;
+
+    private int targetDirection;
+
+    public PlayerSwimTurnState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public void SetTurnData(int direction)
+    {
+        targetDirection = direction;
+    }
+
+    public override void Enter()
+    {
+        timer = 0f;
+        player.rb.velocity = Vector3.zero;
+
+        fromRotation = player.transform.rotation;
+        toRotation = (targetDirection > 0) ? Quaternion.Euler(0, 0, 0) : Quaternion.Euler(0, 180f, 0);
+    }
+
+    public override void Update()
+    {
+        timer += Time.deltaTime;
+        float t = Mathf.Clamp01(timer / rotationDuration);
+
+        player.transform.rotation = Quaternion.Slerp(fromRotation, toRotation, t);
+
+        if (t >= 1f)
+        {
+            player.isFacingRight = targetDirection > 0;
+            stateMachine.ChangeState(player.swimSurfaceState);
+        }
+    }
+
+    public override void Exit()
+    {
+        
+    }
+}
+
+public class PlayerUnderwaterSwimState : PlayerBaseState
+{
+    private static readonly int SwimFwd = Animator.StringToHash("SwimFwd");
+    private static readonly int SwimVert = Animator.StringToHash("SwimVert");
+
+    private float horizontalInput;
+    private float verticalInput;
+
+    private float currentFwd = 0f;
+    private float currentVert = 0f;
+    private float blendSmoothTime = 5f;
+    
+    private const float surfaceBufferDistance = 0.05f;
+
+    public PlayerUnderwaterSwimState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.useGravity = false;
+        player.animator.applyRootMotion = false;
+
+        player.animator.Play("SwimUnderwater");
+        player.animator.SetFloat(SwimFwd, 0f);
+        player.animator.SetFloat(SwimVert, 0f);
+        
+        currentFwd = 0f;
+        currentVert = 0f;
+    }
+
+    public override void Update()
+    {
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+        verticalInput = Input.GetAxisRaw("Vertical");
+
+        if (horizontalInput != 0)
+        {
+            int currentDir = horizontalInput > 0 ? 1 : -1;
+            if ((player.isFacingRight && currentDir == -1) || (!player.isFacingRight && currentDir == 1))
+            {
+                player.underwaterTurnState.SetTurnData(currentDir);
+                stateMachine.ChangeState(player.underwaterTurnState);
+                return;
+            }
+        }
+
+        Vector3 moveDir = new Vector3(0f, verticalInput, horizontalInput).normalized;
+        player.rb.velocity = moveDir * player.swimSpeed;
+
+        float targetFwd = Mathf.Abs(horizontalInput);
+        float targetVert = verticalInput;
+
+        currentFwd = Mathf.Lerp(currentFwd, targetFwd, Time.deltaTime * blendSmoothTime);
+        currentVert = Mathf.Lerp(currentVert, targetVert, Time.deltaTime * blendSmoothTime);
+
+        player.animator.SetFloat(SwimFwd, currentFwd);
+        player.animator.SetFloat(SwimVert, currentVert);
+
+        if (IsTouchingWaterSurface() && verticalInput > 0)
+        {
+            stateMachine.ChangeState(player.swimSurfaceState);
+            return;
+        }
+
+        if (!player.IsInWater())
+        {
+            stateMachine.ChangeState(player.idleState);
+            return;
+        }
+
+        player.underwaterTime += Time.deltaTime;
+        if (player.underwaterTime > player.maxUnderwaterTime)
+        {
+            stateMachine.ChangeState(player.drowningState);
+        }
+    }
+
+    public override void Exit()
+    {
+        player.animator.SetFloat(SwimFwd, 0f);
+        player.animator.SetFloat(SwimVert, 0f);
+        player.rb.velocity = Vector3.zero;
+    }
+
+    private bool IsTouchingWaterSurface()
+    {
+        return player.waterSurfaceY != null && Mathf.Abs((float)(player.transform.position.y - player.waterSurfaceY)) <= surfaceBufferDistance;
+    }
+}
+
+public class PlayerUnderwaterTurnState : PlayerBaseState
+{
+    private Quaternion fromRotation;
+    private Quaternion toRotation;
+    private float duration = 0.3f;
+    private float timer = 0f;
+
+    private int targetDirection;
+
+    public PlayerUnderwaterTurnState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public void SetTurnData(int direction)
+    {
+        targetDirection = direction;
+    }
+
+    public override void Enter()
+    {
+        timer = 0f;
+        player.rb.velocity = Vector3.zero;
+
+        fromRotation = player.transform.rotation;
+        toRotation = (targetDirection > 0) ? Quaternion.Euler(0, 0, 0) : Quaternion.Euler(0, 180f, 0);
+    }
+
+    public override void Update()
+    {
+        timer += Time.deltaTime;
+        float t = Mathf.Clamp01(timer / duration);
+        player.transform.rotation = Quaternion.Slerp(fromRotation, toRotation, t);
+
+        if (t >= 1f)
+        {
+            player.isFacingRight = targetDirection > 0;
+            stateMachine.ChangeState(player.underwaterSwimState);
+        }
+    }
+}
+
+public class PlayerDrowningState : PlayerBaseState
+{
+    private static readonly int Drowning = Animator.StringToHash("Drowning");
+    private float respawnDelay = 5f;
+    private float timer = 0f;
+
+    public PlayerDrowningState(PlayerController player, PlayerStateMachine stateMachine)
+        : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.rb.velocity = Vector3.zero;
+        player.rb.useGravity = false;
+
+        player.animator.SetTrigger(Drowning);
+        timer = 0f;
+    }
+
+    public override void Update()
+    {
+        timer += Time.deltaTime;
+
+        if (timer >= respawnDelay)
+        {
+            RespawnPlayer();
+        }
+    }
+
+    public override void Exit()
+    {
+        
+    }
+}
