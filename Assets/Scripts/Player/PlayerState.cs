@@ -421,7 +421,6 @@ public class PlayerFallState : PlayerBaseState
                 return true;
             }
         }
-
         return false;
     }
 }
@@ -1136,7 +1135,6 @@ public class PlayerWaterImpactState : PlayerBaseState
 public class PlayerSwimSurfaceState : PlayerBaseState
 {
     private static readonly int SwimSpeed = Animator.StringToHash("SwimSpeed");
-    private static readonly int SwimTurn180 = Animator.StringToHash("SwimTurn180");
 
     private float currentSpeed = 0f;
     private float targetSpeed = 0f;
@@ -1148,6 +1146,9 @@ public class PlayerSwimSurfaceState : PlayerBaseState
 
     public override void Enter()
     {
+        if (player.drowningParticle != null)
+            player.drowningParticle.SetActive(false);
+        
         player.rb.velocity = Vector3.zero;
         player.rb.useGravity = false;
         player.underwaterTime = 0f;
@@ -1166,11 +1167,6 @@ public class PlayerSwimSurfaceState : PlayerBaseState
         Vector3 moveDir = new Vector3(0f, 0f, input);
         player.rb.velocity = moveDir * player.swimSpeed;
 
-        if (player.isFacingRight)
-        {
-            
-        }
-
         if (input != 0)
         {
             int currentDir = input > 0 ? 1 : -1;
@@ -1178,17 +1174,21 @@ public class PlayerSwimSurfaceState : PlayerBaseState
             {
                 player.swimTurnState.SetTurnData(currentDir);
                 stateMachine.ChangeState(player.swimTurnState);
+                return;
             }
         }
 
         if (Input.GetAxisRaw("Vertical") < -0.1f)
         {
             stateMachine.ChangeState(player.underwaterSwimState);
+            return;
         }
 
         if (!player.IsInWater())
         {
+            player.rb.useGravity = true;
             stateMachine.ChangeState(player.idleState);
+            return;
         }
     }
 
@@ -1263,9 +1263,11 @@ public class PlayerUnderwaterSwimState : PlayerBaseState
 
     public override void Enter()
     {
+        if (player.drowningParticle != null)
+            player.drowningParticle.SetActive(true);
+        
         player.rb.useGravity = false;
-        player.animator.applyRootMotion = false;
-
+        
         player.animator.Play("SwimUnderwater");
         player.animator.SetFloat(SwimFwd, 0f);
         player.animator.SetFloat(SwimVert, 0f);
@@ -1372,6 +1374,11 @@ public class PlayerUnderwaterTurnState : PlayerBaseState
             stateMachine.ChangeState(player.underwaterSwimState);
         }
     }
+
+    public override void Exit()
+    {
+        
+    }
 }
 
 public class PlayerDrowningState : PlayerBaseState
@@ -1404,6 +1411,9 @@ public class PlayerDrowningState : PlayerBaseState
 
     public override void Exit()
     {
+        if (player.drowningParticle != null)
+            player.drowningParticle.SetActive(false);
         
+        player.animator.Play("Idle_Walk_Run");
     }
 }

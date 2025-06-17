@@ -19,6 +19,9 @@ public class PlayerController : MonoBehaviour
     public CapsuleCollider capsule;
     public Transform visualRoot;
     public Quaternion originalVisualRotation;
+    
+    [Header("파티클 시스템")]
+    public GameObject drowningParticle;
 
     public bool isGrounded;
     public bool isFacingRight = true;
@@ -280,23 +283,14 @@ public class PlayerController : MonoBehaviour
     {
         return Physics.Raycast(transform.position + Vector3.down * 0.1f, Vector3.down, 0.05f, LayerMask.GetMask("Ground"));
     }
+
     /// <summary>
-    /// 물 관련 함수들
+    ///  물 관련 함수들
     /// </summary>
-    /// <param name="y"></param>
-    public void SetWaterSurfaceY(float y)
-    {
-        waterSurfaceY = y;
-    }
-    public void ClearWaterSurfaceY()
-    {
-        waterSurfaceY = null;
-    }
+    /// <returns></returns>
     public bool IsSubmerged()
     {
-        if (waterSurfaceY.HasValue)
-            return transform.position.y < waterSurfaceY.Value - 0.5f;
-        return false;
+        return waterSurfaceY.HasValue && transform.position.y < waterSurfaceY.Value - 0.3f;
     }
     public bool IsInWater()
     {
