@@ -13,11 +13,23 @@ public class PushableDoor : MonoBehaviour
     [HideInInspector] public Transform pushingPlayer;
 
     private float closeTimer = 0f;
+    
+    public MonoBehaviour[] unlockConditionScripts;
+    private IUnlockCondition[] unlockConditions;
 
     private void Start()
     {
         closedRotation = transform.localRotation;
         openRotation = closedRotation;
+        
+        if (unlockConditionScripts != null && unlockConditionScripts.Length > 0)
+        {
+            unlockConditions = new IUnlockCondition[unlockConditionScripts.Length];
+            for (int i = 0; i < unlockConditionScripts.Length; i++)
+            {
+                unlockConditions[i] = unlockConditionScripts[i] as IUnlockCondition;
+            }
+        }
     }
 
     private void Update()
@@ -74,6 +86,18 @@ public class PushableDoor : MonoBehaviour
 
     public void StartPushRotation(Transform player)
     {
+        if (unlockConditions != null)
+        {
+            foreach (var condition in unlockConditions)
+            {
+                if (condition == null || !condition.IsUnlocked())
+                {
+                    Debug.Log("아직 모든 조건이 만족되지 않아 문을 밀 수 없습니다.");
+                    return;
+                }
+            }
+        }
+        
         isBeingPushed = true;
         closeTimer = 0f;
         pushingPlayer = player;

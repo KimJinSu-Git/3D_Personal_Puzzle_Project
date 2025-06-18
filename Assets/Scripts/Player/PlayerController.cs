@@ -127,6 +127,11 @@ public class PlayerController : MonoBehaviour
         stateMachine.Update();
         Debug.Log(stateMachine.CurrentState);
         isFacingCheck();
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            stateMachine.ChangeState(deathState);
+        }
     }
 
     private void isFacingCheck()
@@ -169,7 +174,9 @@ public class PlayerController : MonoBehaviour
     
     private void OnCollisionStay(Collision other)
     {
-        if (other.gameObject.layer == LayerMask.NameToLayer("Ground") || other.contacts[0].normal.y > 0.5f)
+        if (other.gameObject.layer == LayerMask.NameToLayer("Ground") || 
+            other.contacts[0].normal.y > 0.5f ||
+            other.gameObject.layer == LayerMask.NameToLayer("Wall"))
         {
             isGrounded = true;
         }
@@ -177,7 +184,9 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionExit(Collision other)
     {
-        if (other.gameObject.layer == LayerMask.NameToLayer("Ground") || other.gameObject.layer == LayerMask.NameToLayer("Pushable"))
+        if (other.gameObject.layer == LayerMask.NameToLayer("Ground") || 
+            other.gameObject.layer == LayerMask.NameToLayer("Pushable") ||
+            other.gameObject.layer == LayerMask.NameToLayer("Ground"))
         {
             isGrounded = false;
         }

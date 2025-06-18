@@ -314,7 +314,7 @@ public class PlayerJumpState : PlayerBaseState
 
     public override void Update()
     {
-        if (player.rb.velocity.y < -1f)
+        if (player.rb.velocity.y < -0.4f)
         {
             stateMachine.ChangeState(player.fallState);
             return;
@@ -372,7 +372,7 @@ public class PlayerFallState : PlayerBaseState
             return;
         }
         
-        if (!playedExitAnim && IsNearGround())
+        if (IsNearGround())
         {
             player.animator.Play("Jump_Exit");
             playedExitAnim = true;
@@ -398,10 +398,15 @@ public class PlayerFallState : PlayerBaseState
     
     private bool IsNearGround()
     {
-        Vector3 origin = player.transform.position + Vector3.up * 0.1f;
+        float offsetY = 0.1f;
+        float rayDistance = groundCheckDistance;
+        float forwardOffset = 0.1f;
 
-        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, groundCheckDistance,
-                LayerMask.GetMask("Ground", "Pushable")))
+        Vector3 origin = player.transform.position + Vector3.up * offsetY + player.transform.forward * forwardOffset;
+        Vector3 direction = Vector3.down;
+
+        if (Physics.Raycast(origin, direction, out RaycastHit hit, rayDistance,
+                LayerMask.GetMask("Ground", "Pushable", "Wall")))
         {
             float angle = Vector3.Angle(hit.normal, Vector3.up);
 
@@ -421,6 +426,7 @@ public class PlayerFallState : PlayerBaseState
                 return true;
             }
         }
+
         return false;
     }
 }
