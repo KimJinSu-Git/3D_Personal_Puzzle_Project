@@ -5,14 +5,15 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class PushableBox : MonoBehaviour
 {
-    private Rigidbody rb;
-    private bool isBeingPushed = false;
-    private Vector3 moveDirection = Vector3.zero;
-
     [Header("Mass Settings")]
-    public float defaultMass = 100f;  // 평소에는 밀리지 않게 무겁게
-    public float pushableMass = 1f;   // 밀기 상태일 때만 가볍게
-
+    public float defaultMass = 100f; 
+    public float pushableMass = 1f;
+    
+    public bool isBeingPushed = false;
+    
+    private Rigidbody rb;
+    private Vector3 moveDirection = Vector3.zero;
+    
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();

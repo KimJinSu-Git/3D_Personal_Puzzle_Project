@@ -32,8 +32,9 @@ public class PlayerController : MonoBehaviour
 
     private Coroutine colliderLerpRoutine;
     private float pushCheckDistance = 0.2f;
-    private bool isInWater = false;
+    private float yRotation;
     
+    public bool isInWater = false;
     public float? waterSurfaceY = null;
     public float underwaterTime = 0f;
     public float maxUnderwaterTime = 8f;
@@ -125,6 +126,13 @@ public class PlayerController : MonoBehaviour
     {
         stateMachine.Update();
         Debug.Log(stateMachine.CurrentState);
+        isFacingCheck();
+    }
+
+    private void isFacingCheck()
+    {
+        yRotation = transform.eulerAngles.y;
+        isFacingRight = Mathf.Approximately(yRotation, 0f);
     }
     
     public void SetStandingCollider(float duration = 0.25f)

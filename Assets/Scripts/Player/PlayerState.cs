@@ -26,8 +26,7 @@ public abstract class PlayerBaseState
     
     protected void RespawnPlayer()
     {
-        Vector3 respawnPos = PlayerRespawnManager.Instance.GetRespawnPoint();
-        player.transform.position = respawnPos;
+        PlayerRespawnManager.Instance.RespawnPlayer(player.gameObject);
 
         stateMachine.ChangeState(player.idleState);
     }
@@ -41,6 +40,7 @@ public class PlayerIdleState : PlayerBaseState
     public override void Enter()
     {
         player.SetStandingCollider();
+        player.rb.useGravity = true;
         
         player.rb.velocity = new Vector3(0, player.rb.velocity.y, 0);
         player.animator.SetFloat(Speed, 0f);
@@ -365,7 +365,7 @@ public class PlayerFallState : PlayerBaseState
 
     public override void Update()
     {
-        if (player.IsInWater())
+        if (player.IsInWater() && player.isInWater)
         {
             player.lastFallVelocity = player.rb.velocity;
             stateMachine.ChangeState(player.waterImpactState);
@@ -456,6 +456,9 @@ public class PlayerDeathState : PlayerBaseState
     public override void Exit()
     {
         player.animator.ResetTrigger(DeathFwd);
+        player.waterSurfaceY = null;
+        player.isInWater = false;
+        player.underwaterTime = 0f;
         player.SetStandingCollider(0.5f);
     }
 }
@@ -763,8 +766,10 @@ public class PlayerPushBlendState : PlayerBaseState
             {
                 if (Mathf.Abs(inputZ) > 0.1f)
                 {
-                    Vector3 localMove = new Vector3(0f, 0f, inputZ * moveSpeed * Time.deltaTime);
+                    float direction = player.isFacingRight ? 1f : -1f;
+                    Vector3 localMove = new Vector3(0f, 0f, inputZ * direction * moveSpeed * Time.deltaTime);
                     Vector3 worldMove = player.transform.TransformDirection(localMove);
+
                     pushableBoxTarget.StartPush(worldMove);
                 }
                 else
@@ -865,7 +870,6 @@ public class PlayerPushExitState : PlayerBaseState
         AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
         if (Quaternion.Angle(current, target) < 1f && info.IsName("Push_Exit") && info.normalizedTime >= 0.9f)
         {
-            Debug.Log("여기 들어왔냐?");
             player.visualRoot.rotation = target;
             stateMachine.ChangeState(player.idleState);
         }
@@ -1413,6 +1417,10 @@ public class PlayerDrowningState : PlayerBaseState
     {
         if (player.drowningParticle != null)
             player.drowningParticle.SetActive(false);
+        
+        player.waterSurfaceY = null;
+        player.isInWater = false;
+        player.underwaterTime = 0f;
         
         player.animator.Play("Idle_Walk_Run");
     }
