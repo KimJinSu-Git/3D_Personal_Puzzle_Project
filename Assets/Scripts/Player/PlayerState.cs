@@ -454,6 +454,7 @@ public class PlayerDeathState : PlayerBaseState
 
         if (!respawned && deathTimer >= respawnDelay)
         {
+            GameResetEvent.BroadcastPlayerReset();
             RespawnPlayer();
             respawned = true;
         }
@@ -497,14 +498,24 @@ public class PlayerCrouchToggleState : PlayerBaseState
     {
         AnimatorStateInfo stateInfo = player.animator.GetCurrentAnimatorStateInfo(0);
 
-        if (stateInfo.IsName("Crouch_Settle") && stateInfo.normalizedTime >= 0.80f)
+        if (stateInfo.IsName("Crouch_Settle"))
         {
-            stateMachine.ChangeState(player.crouchBlendState);
+            player.skirtPos.transform.localPosition = new Vector3(0.1488715f, 0.12f, 0.01021058f);
+            player.skirtPos.transform.localScale = new Vector3(0.9999992f, 1.5f, 1);
+            if (stateInfo.normalizedTime >= 0.80f)
+            {
+                stateMachine.ChangeState(player.crouchBlendState);
+            }
         }
         
-        if (stateInfo.IsName("Crouch_Settle_Reverse") && stateInfo.normalizedTime >= 0.80f)
+        if (stateInfo.IsName("Crouch_Settle_Reverse"))
         {
-            stateMachine.ChangeState(player.idleState);
+            player.skirtPos.transform.localPosition = new Vector3(0.1488715f, -0.004006684f, 0.01021058f);
+            player.skirtPos.transform.localScale = new Vector3(0.9999992f, 0.9999998f, 1);
+            if (stateInfo.normalizedTime >= 0.80f)
+            {
+                stateMachine.ChangeState(player.idleState);
+            }
         }
     }
 }

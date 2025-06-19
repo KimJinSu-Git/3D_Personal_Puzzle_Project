@@ -19,6 +19,7 @@ public class PlayerController : MonoBehaviour
     public CapsuleCollider capsule;
     public Transform visualRoot;
     public Quaternion originalVisualRotation;
+    public GameObject skirtPos;
     
     [Header("파티클 시스템")]
     public GameObject drowningParticle;
