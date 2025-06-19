@@ -37,7 +37,7 @@ public class PlayerController : MonoBehaviour
     public bool isInWater = false;
     public float? waterSurfaceY = null;
     public float underwaterTime = 0f;
-    public float maxUnderwaterTime = 8f;
+    public float maxUnderwaterTime = 10f;
     
     /// <summary>
     /// 상태 종류들
