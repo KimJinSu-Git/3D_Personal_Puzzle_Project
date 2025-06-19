@@ -504,6 +504,7 @@ public class PlayerCrouchToggleState : PlayerBaseState
             player.skirtPos.transform.localScale = new Vector3(0.9999992f, 1.5f, 1);
             if (stateInfo.normalizedTime >= 0.80f)
             {
+                player.crouching = true;
                 stateMachine.ChangeState(player.crouchBlendState);
             }
         }
@@ -514,6 +515,7 @@ public class PlayerCrouchToggleState : PlayerBaseState
             player.skirtPos.transform.localScale = new Vector3(0.9999992f, 0.9999998f, 1);
             if (stateInfo.normalizedTime >= 0.80f)
             {
+                player.crouching = false;
                 stateMachine.ChangeState(player.idleState);
             }
         }
@@ -638,6 +640,7 @@ public class PlayerCrawlTransitionState : PlayerBaseState
         AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
         if (info.IsName("Crawling"))
         {
+            player.crawling = true;
             stateMachine.ChangeState(player.crawlBlendState);
         }
     }
@@ -707,6 +710,7 @@ public class PlayerCrawlExitState : PlayerBaseState
         AnimatorStateInfo info = player.animator.GetCurrentAnimatorStateInfo(0);
         if (info.IsName("Crouch"))
         {
+            player.crawling = false;
             stateMachine.ChangeState(player.crouchBlendState);
         }
     }

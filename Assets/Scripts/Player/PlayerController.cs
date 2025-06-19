@@ -24,6 +24,10 @@ public class PlayerController : MonoBehaviour
     [Header("파티클 시스템")]
     public GameObject drowningParticle;
 
+    [Header("플레이어 감지 체크 요소")] 
+    public bool crouching = false;
+    public bool crawling = false;
+
     public bool isGrounded;
     public bool isFacingRight = true;
     public Vector3 lastFallVelocity;
