@@ -3,10 +3,10 @@ using UnityEngine;
 public class SpotlightDetector : MonoBehaviour
 {
     [Header("감지 설정")]
-    public float detectionRange = 10f;
+    public float detectionRange = 20f;
     public float detectionAngle = 30f;
     public int rayCount = 10;
-    public LayerMask detectionMask; // Player만 감지하는 레이어
+    public LayerMask detectionMask;
 
     [Header("디버그")]
     public bool debugRays = true;

@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - LadderTop
+  - Obstacle
   layers:
   - Default
   - TransparentFX
@@ -17,7 +18,7 @@ TagManager:
   - Ground
   - Ladder
   - Door
-  - 
+  - Obstacle
   - 
   - Wall
   - 

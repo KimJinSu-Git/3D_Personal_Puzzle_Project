@@ -27,6 +27,7 @@ public class PlayerController : MonoBehaviour
     [Header("플레이어 감지 체크 요소")] 
     public bool crouching = false;
     public bool crawling = false;
+    public bool caughtDie = false;
 
     public bool isGrounded;
     public bool isFacingRight = true;
@@ -80,6 +81,8 @@ public class PlayerController : MonoBehaviour
     public PlayerUnderwaterTurnState underwaterTurnState;
     public PlayerDrowningState drowningState;
     
+    public PlayerCaughtState caughtState;
+    
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -120,6 +123,8 @@ public class PlayerController : MonoBehaviour
         underwaterSwimState = new PlayerUnderwaterSwimState(this, stateMachine);
         underwaterTurnState = new PlayerUnderwaterTurnState(this, stateMachine);
         drowningState = new PlayerDrowningState(this, stateMachine);
+
+        caughtState = new PlayerCaughtState(this, stateMachine);
     }
 
     private void Start()

@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class UnderwaterEffectController : MonoBehaviour
 {
-    public GameObject underwaterVolumeObject;  // 수중 효과용 Volume 오브젝트
+    public GameObject underwaterVolumeObject;
     private PlayerController player;
 
     private void Start()

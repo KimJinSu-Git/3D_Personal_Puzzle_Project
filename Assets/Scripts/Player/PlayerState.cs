@@ -441,11 +441,19 @@ public class PlayerDeathState : PlayerBaseState
     
     public override void Enter()
     {
-        player.animator.SetTrigger(DeathFwd);
+        if (!player.caughtDie)
+        {
+            player.animator.SetTrigger(DeathFwd);
+            player.SetDeathCollider(0.5f);
+        }
+        else
+        {
+            player.capsule.direction = 1;
+            player.rb.freezeRotation = false; // 나중에 y는 잠궈주자.
+        }
         player.rb.velocity = Vector3.zero;
         deathTimer = 0f;
         respawned = false;
-        player.SetDeathCollider(0.5f);
     }
 
     public override void Update()
@@ -462,11 +470,38 @@ public class PlayerDeathState : PlayerBaseState
 
     public override void Exit()
     {
+        player.transform.localRotation = Quaternion.Euler(0, 0, 0);
+        player.rb.freezeRotation = true;
+        player.caughtDie = false;
         player.animator.ResetTrigger(DeathFwd);
         player.waterSurfaceY = null;
         player.isInWater = false;
         player.underwaterTime = 0f;
         player.SetStandingCollider(0.5f);
+    }
+}
+
+public class PlayerCaughtState : PlayerBaseState
+{
+    public PlayerCaughtState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
+
+    public override void Enter()
+    {
+        player.animator.Play("Idle");
+        player.rb.isKinematic = true;
+        player.caughtDie = true;
+    }
+
+    public override void Update()
+    {
+        player.transform.localPosition = new Vector3(0, 0, -0.5f);
+        player.transform.localRotation = Quaternion.Euler(-90f, 0f, 180f);
+    }
+
+    public override void Exit()
+    {
+        player.rb.isKinematic = false;
+        // player.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
     }
 }
 
@@ -1446,3 +1481,4 @@ public class PlayerDrowningState : PlayerBaseState
         player.animator.Play("Idle_Walk_Run");
     }
 }
+

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -9,10 +10,15 @@ public class EnemyAIController : MonoBehaviour
     private Vector3 startPosition;
     private NavMeshAgent agent;
     private PlayerController targetPlayer;
+    private CapsuleCollider collider;
+    private Rigidbody rb;
+    private AnimatorStateInfo info;
+    private Vector3 startCollider;
+    private Vector3 targetCollider;
 
     [Header("추격 설정")]
     public float chaseSpeed = 4f;
-    public float returnSpeed = 2f;
+    public float returnSpeed = 1f;
     public float maxChaseDistance = 15f;
     public float catchDistance = 1.5f;
 
@@ -20,17 +26,30 @@ public class EnemyAIController : MonoBehaviour
     public Animator animator;
     public Transform catchHandTransform;
 
+    [Header("장애물 처리")]
+    public float vaultCheckDistance = 1.2f;
+    public string vaultableTag = "Obstacle";
+    public float vaultResumeDelay = 1.0f; // vault 애니메이션 길이만큼
+
     private float catchTimer = 0f;
-    private float throwDelay = 1.2f;
+    private bool hasTriggeredDeath = false;
 
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        collider = GetComponent<CapsuleCollider>();
+        rb = GetComponent<Rigidbody>();
         startPosition = transform.position;
+        rb.isKinematic = true;
+        startCollider = collider.center;
+        targetCollider = new Vector3(0, 1.27f, 0);
     }
 
     private void Update()
     {
+        info = animator.GetCurrentAnimatorStateInfo(0);
+        Debug.Log(rb.velocity);
+        
         switch (currentState)
         {
             case GuardState.Idle:
@@ -39,6 +58,7 @@ public class EnemyAIController : MonoBehaviour
 
             case GuardState.Chasing:
                 ChasePlayer();
+                CheckForObstacleVault();
                 break;
 
             case GuardState.Catching:
@@ -47,6 +67,7 @@ public class EnemyAIController : MonoBehaviour
 
             case GuardState.Returning:
                 ReturnToStart();
+                CheckForObstacleVault();
                 break;
         }
     }
@@ -65,31 +86,37 @@ public class EnemyAIController : MonoBehaviour
     {
         currentState = newState;
 
-        if (newState == GuardState.Returning)
+        switch (newState)
         {
-            agent.speed = returnSpeed;
-            targetPlayer = null;
-            Debug.Log("Guard: 복귀 시작");
-        }
-        else if (newState == GuardState.Idle)
-        {
-            agent.speed = 0f;
-            Debug.Log("Guard: 대기 상태");
-        }
-        else if (newState == GuardState.Catching)
-        {
-            agent.isStopped = true;
-            animator.SetTrigger("Catch_Start");
-
-            if (targetPlayer != null)
-            {
-                targetPlayer.transform.SetParent(catchHandTransform);
-                targetPlayer.transform.localPosition = Vector3.zero;
-                targetPlayer.rb.isKinematic = true;
-                targetPlayer.stateMachine.ChangeState(targetPlayer.idleState);
-            }
-
-            catchTimer = 0f;
+            case GuardState.Idle:
+                rb.isKinematic = true;
+                agent.speed = 0f;
+                animator.Play("Idle");
+                break;
+            case GuardState.Chasing:
+                agent.isStopped = false;
+                agent.speed = chaseSpeed;
+                animator.Play("Run");
+                break;
+            case GuardState.Catching:
+                rb.isKinematic = false;
+                collider.center = targetCollider;
+                agent.isStopped = true;
+                animator.Play("Plunge");
+                if (targetPlayer != null && !targetPlayer.caughtDie)
+                {
+                    targetPlayer.transform.SetParent(catchHandTransform);
+                    targetPlayer.stateMachine.ChangeState(targetPlayer.caughtState);
+                }
+                catchTimer = 0f;
+                break;
+            case GuardState.Returning:
+                collider.center = startCollider;
+                agent.speed = returnSpeed;
+                agent.isStopped = false;
+                targetPlayer = null;
+                animator.Play("Walk");
+                break;
         }
     }
 
@@ -99,6 +126,11 @@ public class EnemyAIController : MonoBehaviour
         {
             ChangeState(GuardState.Returning);
             return;
+        }
+
+        if (info.IsName("Obstacle_Vault") && info.normalizedTime >= 0.9f)
+        {
+            animator.SetTrigger("Obstacle_Run");
         }
 
         agent.SetDestination(targetPlayer.transform.position);
@@ -116,32 +148,46 @@ public class EnemyAIController : MonoBehaviour
 
     private void HandleCatching()
     {
-        catchTimer += Time.deltaTime;
-
-        if (catchTimer >= throwDelay)
+        if (info.IsName("Plunge"))
         {
-            animator.SetTrigger("Catch_Throw");
-        }
+            float yRot = transform.rotation.eulerAngles.y; // 월드 기준 회전 값
+            float angleToForward = Mathf.Abs(Mathf.DeltaAngle(yRot, 0f));
+            float angleToBackward = Mathf.Abs(Mathf.DeltaAngle(yRot, 180f));
 
-        AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
-        if (info.IsName("Catch_Throw") && info.normalizedTime >= 0.95f)
-        {
-            if (targetPlayer != null)
+            if (angleToForward < angleToBackward)
             {
+                transform.localRotation = Quaternion.Euler(0f, -30f, 0f); // 전방
+            }
+            else
+            {
+                transform.localRotation = Quaternion.Euler(0f, 120f, 0f); // 후방
+            }
+            
+            var vector3 = transform.position;
+            vector3.x = 0;
+            transform.position = vector3;
+            if (!hasTriggeredDeath && info.normalizedTime >= 0.3f && targetPlayer != null)
+            {
+                hasTriggeredDeath = true;
                 targetPlayer.transform.SetParent(null);
-                targetPlayer.rb.isKinematic = false;
-                targetPlayer.rb.AddForce(Vector3.back * 5f + Vector3.up * 3f, ForceMode.Impulse);
                 targetPlayer.stateMachine.ChangeState(targetPlayer.deathState);
             }
 
-            agent.isStopped = false;
-            ChangeState(GuardState.Returning);
+            if (info.normalizedTime >= 0.7f)
+            {
+                hasTriggeredDeath = false;
+                ChangeState(GuardState.Returning);
+            }
         }
     }
 
     private void ReturnToStart()
     {
         agent.SetDestination(startPosition);
+        if (info.IsName("Obstacle_Vault") && info.normalizedTime >= 0.9f)
+        {
+            animator.SetTrigger("Obstacle_Walk");
+        }
         if (Vector3.Distance(transform.position, startPosition) < 0.5f)
         {
             ChangeState(GuardState.Idle);
@@ -150,6 +196,47 @@ public class EnemyAIController : MonoBehaviour
 
     private void PatrolOrIdle()
     {
-        // 순찰 구현 가능
+        // 추후 순찰 경로 구현 가능
+    }
+
+    private void CheckForObstacleVault()
+    {
+        if (Physics.Raycast(transform.position + Vector3.up * 0.5f, transform.forward, out RaycastHit hit, vaultCheckDistance))
+        {
+            if (hit.collider.CompareTag(vaultableTag))
+            {
+                animator.Play("Obstacle_Vault");
+                collider.enabled = false;
+                rb.isKinematic = true;
+                Invoke(nameof(ResumeAfterVault), vaultResumeDelay);
+                return;
+            }
+        }
+
+        if (!info.IsName("Obstacle_Vault"))
+        {
+            collider.enabled = true;
+            rb.isKinematic = false;
+        }
+    }
+
+    private void ResumeAfterVault()
+    {
+        agent.isStopped = false;
+    }
+
+    private void ResetEnemy()
+    {
+        ChangeState(GuardState.Idle);
+    }
+
+    private void OnEnable()
+    {
+        GameResetEvent.OnPlayerReset += ResetEnemy;
+    }
+
+    private void OnDisable()
+    {
+        GameResetEvent.OnPlayerReset -= ResetEnemy;
     }
 }
