@@ -7,15 +7,6 @@ public class EnemyAIController : MonoBehaviour
     public enum GuardState { Idle, Chasing, Catching, Returning }
     private GuardState currentState = GuardState.Idle;
 
-    private Vector3 startPosition;
-    private NavMeshAgent agent;
-    private PlayerController targetPlayer;
-    private CapsuleCollider collider;
-    private Rigidbody rb;
-    private AnimatorStateInfo info;
-    private Vector3 startCollider;
-    private Vector3 targetCollider;
-
     [Header("추격 설정")]
     public float chaseSpeed = 4f;
     public float returnSpeed = 1f;
@@ -29,7 +20,34 @@ public class EnemyAIController : MonoBehaviour
     [Header("장애물 처리")]
     public float vaultCheckDistance = 1.2f;
     public string vaultableTag = "Obstacle";
-    public float vaultResumeDelay = 1.0f; // vault 애니메이션 길이만큼
+    public float vaultResumeDelay = 1.0f;
+    
+    [Header("좁은 통로 감지 설정")]
+    public Transform headTransform;
+    public float obstacleCheckDistance = 0.3f;
+    public LayerMask obstacleLayer;
+
+    private bool obstacleDetected = false;
+    private bool isBumping = false;
+    private float bumpTimer = 0f;
+    
+    // 구성요소
+    private NavMeshAgent agent;
+    private PlayerController targetPlayer;
+    private CapsuleCollider collider;
+    private Rigidbody rb;
+    private AnimatorStateInfo info;
+    
+    // 값 저장할 변수
+    private Vector3 startPosition;
+    private Vector3 startCollider;
+    private Vector3 targetCollider;
+    
+    // 가만히 있을 때의 상태 변수
+    [SerializeField] private float idleRotationSpeed = 0.2f; // 회전 속도
+    private float idleRotationMin = 70f;
+    private float idleRotationMax = 110f;
+    private float idleRotationTimer = 0f;
 
     private float catchTimer = 0f;
     private bool hasTriggeredDeath = false;
@@ -127,6 +145,24 @@ public class EnemyAIController : MonoBehaviour
             ChangeState(GuardState.Returning);
             return;
         }
+        
+        // 장애물 앞에 막혔는지 체크
+        if (!isBumping && CheckForObstacleHead())
+        {
+            StartBumpReaction();
+            return;
+        }
+
+        if (isBumping)
+        {
+            bumpTimer += Time.deltaTime;
+            if (bumpTimer >= 1f)
+            {
+                isBumping = false;
+                ChangeState(GuardState.Returning);
+            }
+            return;
+        }
 
         if (info.IsName("Obstacle_Vault") && info.normalizedTime >= 0.9f)
         {
@@ -196,7 +232,35 @@ public class EnemyAIController : MonoBehaviour
 
     private void PatrolOrIdle()
     {
-        // 추후 순찰 경로 구현 가능
+        idleRotationTimer += Time.deltaTime * idleRotationSpeed;
+        float t = Mathf.PingPong(idleRotationTimer, 1f);
+
+        float targetY = Mathf.Lerp(idleRotationMin, idleRotationMax, t);
+
+        Vector3 currentEuler = transform.rotation.eulerAngles;
+        transform.rotation = Quaternion.Euler(0f, targetY, 0f);
+    }
+    
+    private bool CheckForObstacleHead()
+    {
+        Debug.DrawRay(headTransform.position, headTransform.up * obstacleCheckDistance, Color.red);
+        if (Physics.Raycast(headTransform.position, headTransform.up, out RaycastHit hit, obstacleCheckDistance, obstacleLayer))
+        {
+            if (hit.collider.CompareTag("Obstacle_Head"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private void StartBumpReaction()
+    {
+        isBumping = true;
+        bumpTimer = 0f;
+
+        agent.isStopped = true;
+        animator.Play("Obstacle_Bump");
     }
 
     private void CheckForObstacleVault()
