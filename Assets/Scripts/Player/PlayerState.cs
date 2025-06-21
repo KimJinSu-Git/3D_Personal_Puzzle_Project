@@ -830,6 +830,7 @@ public class PlayerPushBlendState : PlayerBaseState
                 }
                 else
                 {
+                    Debug.Log("여긴가 ?");
                     pushableBoxTarget.StopPush();
                 }
             }
@@ -881,6 +882,7 @@ public class PlayerPushBlendState : PlayerBaseState
 
         if (!player.CheckPushableObject() && (pushableDoorTarget == null || !pushableDoorTarget.isBeingPushed))
         {
+            Debug.Log("아님 여긴가 ?");
             pushableBoxTarget?.StopPush();
             pushableDoorTarget?.StopPush();
             stateMachine.ChangeState(player.pushExitState);
