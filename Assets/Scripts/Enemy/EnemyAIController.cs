@@ -8,10 +8,10 @@ public class EnemyAIController : MonoBehaviour
     private GuardState currentState = GuardState.Idle;
 
     [Header("추격 설정")]
-    public float chaseSpeed = 4f;
+    public float chaseSpeed = 3.6f;
     public float returnSpeed = 1f;
-    public float maxChaseDistance = 15f;
-    public float catchDistance = 1.5f;
+    public float maxChaseDistance = 30f;
+    public float catchDistance = 1f;
 
     [Header("애니메이션 및 잡기 처리")]
     public Animator animator;
@@ -30,6 +30,7 @@ public class EnemyAIController : MonoBehaviour
     private bool obstacleDetected = false;
     private bool isBumping = false;
     private float bumpTimer = 0f;
+    private bool isFailed = false;
     
     // 구성요소
     private NavMeshAgent agent;
@@ -66,7 +67,6 @@ public class EnemyAIController : MonoBehaviour
     private void Update()
     {
         info = animator.GetCurrentAnimatorStateInfo(0);
-        Debug.Log(rb.velocity);
         
         switch (currentState)
         {
@@ -92,7 +92,7 @@ public class EnemyAIController : MonoBehaviour
 
     public void OnPlayerDetected(PlayerController player)
     {
-        if (currentState == GuardState.Catching) return;
+        if (currentState == GuardState.Catching || isFailed) return;
 
         targetPlayer = player;
         agent.speed = chaseSpeed;
@@ -220,6 +220,7 @@ public class EnemyAIController : MonoBehaviour
     private void ReturnToStart()
     {
         agent.SetDestination(startPosition);
+        isFailed = false;
         if (info.IsName("Obstacle_Vault") && info.normalizedTime >= 0.9f)
         {
             animator.SetTrigger("Obstacle_Walk");
@@ -256,6 +257,7 @@ public class EnemyAIController : MonoBehaviour
     
     private void StartBumpReaction()
     {
+        isFailed = true;
         isBumping = true;
         bumpTimer = 0f;
 
@@ -269,6 +271,7 @@ public class EnemyAIController : MonoBehaviour
         {
             if (hit.collider.CompareTag(vaultableTag))
             {
+                agent.speed = 4f;
                 animator.Play("Obstacle_Vault");
                 collider.enabled = false;
                 rb.isKinematic = true;
@@ -279,6 +282,7 @@ public class EnemyAIController : MonoBehaviour
 
         if (!info.IsName("Obstacle_Vault"))
         {
+            agent.speed = chaseSpeed;
             collider.enabled = true;
             rb.isKinematic = false;
         }

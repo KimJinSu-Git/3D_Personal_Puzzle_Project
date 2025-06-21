@@ -592,7 +592,7 @@ public class PlayerCrouchBlendState : PlayerBaseState
         float newSpeed = Mathf.Lerp(currentSpeed, speedValue, Time.deltaTime * 10f);
         player.animator.SetFloat(CrouchSpeed, newSpeed);
 
-        float moveSpeed = player.walkSpeed * 0.5f;
+        float moveSpeed = player.walkSpeed * 0.8f;
         player.rb.velocity = new Vector3(0f, player.rb.velocity.y, inputZ * moveSpeed);
 
         if (Input.GetKeyDown(KeyCode.C))
@@ -708,7 +708,7 @@ public class PlayerCrawlBlendState : PlayerBaseState
         float newSpeed = Mathf.Lerp(current, speed, Time.deltaTime * 10f);
         player.animator.SetFloat(CrawlSpeed, newSpeed);
 
-        float crawlSpeed = player.walkSpeed * 0.3f;
+        float crawlSpeed = player.walkSpeed * 0.6f;
         player.rb.velocity = new Vector3(0, player.rb.velocity.y, inputZ * crawlSpeed);
 
         if (Input.GetKeyDown(KeyCode.X))
