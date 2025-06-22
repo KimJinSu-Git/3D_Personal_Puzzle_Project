@@ -73,6 +73,12 @@ public class PlayerIdleState : PlayerBaseState
             return;
         }
         
+        if (Input.GetKeyDown(KeyCode.E) && player.CheckLeverInFront(out LeverController lever))
+        {
+            stateMachine.ChangeState(new PlayerLeverState(player, stateMachine, lever));
+            return;
+        }
+        
         if (Input.GetKeyDown(KeyCode.C))
         {
             stateMachine.ChangeState(player.crouchEnterState);
@@ -168,6 +174,12 @@ public class PlayerMoveState : PlayerBaseState
         if (player.rb.velocity.y < -1f)
         {
             stateMachine.ChangeState(player.fallState);
+            return;
+        }
+        
+        if (Input.GetKeyDown(KeyCode.E) && player.CheckLeverInFront(out LeverController lever))
+        {
+            stateMachine.ChangeState(new PlayerLeverState(player, stateMachine, lever));
             return;
         }
         
@@ -1484,3 +1496,50 @@ public class PlayerDrowningState : PlayerBaseState
     }
 }
 
+public class PlayerLeverState : PlayerBaseState
+{
+    private LeverController lever;
+    private bool hasStarted = false;
+
+    public PlayerLeverState(PlayerController player, PlayerStateMachine stateMachine, LeverController lever)
+        : base(player, stateMachine)
+    {
+        this.lever = lever;
+    }
+
+    public override void Enter()
+    {
+        player.rb.velocity = Vector3.zero;
+        
+        var vector3 = player.transform.localPosition;
+        vector3.z = 136.12f;
+        player.transform.localPosition = vector3;
+        
+        if (lever.IsLeverUp)
+        {
+            player.animator.Play("Lever_Wall_Push");
+        }
+        else
+        {
+            player.animator.Play("Lever_Wall_Pull");
+        }
+        
+        lever.StartLeverRotation();
+        hasStarted = true;
+    }
+
+    public override void Update()
+    {
+        AnimatorStateInfo info =  player.animator.GetCurrentAnimatorStateInfo(0);
+        
+        if (hasStarted && !lever.IsRotating() && !(info.IsName("Lever_Wall_Push") || info.IsName("Lever_Wall_Pull")))
+        {
+            stateMachine.ChangeState(player.idleState);
+        }
+    }
+
+    public override void Exit()
+    {
+        
+    }
+}

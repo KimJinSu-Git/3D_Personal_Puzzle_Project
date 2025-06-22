@@ -364,4 +364,22 @@ public class PlayerController : MonoBehaviour
         capsule.height = targetHeight;
         capsule.center = targetCenter;
     }
+    
+    public bool CheckLeverInFront(out LeverController lever)
+    {
+        Vector3 origin = transform.position + Vector3.up * 0.5f;
+        Vector3 direction = transform.forward;
+
+        Debug.DrawRay(origin, direction * 0.4f, Color.red, 1f);
+
+        Ray ray = new Ray(origin, direction);
+        if (Physics.Raycast(ray, out RaycastHit hit, 0.4f, LayerMask.GetMask("Lever")))
+        {
+            lever = hit.collider.GetComponent<LeverController>();
+            return lever != null;
+        }
+
+        lever = null;
+        return false;
+    }
 }
