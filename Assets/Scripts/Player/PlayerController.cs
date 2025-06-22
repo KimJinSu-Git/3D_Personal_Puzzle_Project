@@ -153,7 +153,7 @@ public class PlayerController : MonoBehaviour
     {
         if (isInCutscene)
         {
-            rb.velocity = transform.forward * 2.5f;
+            rb.velocity = transform.forward * 2f;
         }
     }
     
