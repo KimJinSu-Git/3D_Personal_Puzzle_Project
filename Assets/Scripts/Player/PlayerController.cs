@@ -37,7 +37,7 @@ public class PlayerController : MonoBehaviour
     public PlayerStateMachine stateMachine;
 
     private Coroutine colliderLerpRoutine;
-    private float pushCheckDistance = 0.2f;
+    private float pushCheckDistance = 0.3f;
     private float yRotation;
     
     public bool isInWater = false;
@@ -207,7 +207,7 @@ public class PlayerController : MonoBehaviour
         if (other.gameObject.layer == LayerMask.NameToLayer("Water"))
         {
             isInWater = false;
-            Debug.Log("🌊 물에서 나옴");
+            waterSurfaceY = null;
         }
     }
     
@@ -225,14 +225,12 @@ public class PlayerController : MonoBehaviour
 
         if (other.gameObject.layer == LayerMask.NameToLayer("Water") && !isInWater)
         {
-            Debug.Log("🌊 물에 들어감");
             isInWater = true;
 
             Collider waterCollider = other.GetComponent<Collider>();
             if (waterCollider != null)
             {
                 waterSurfaceY = waterCollider.bounds.max.y;
-                Debug.Log("수면 높이: " + waterSurfaceY);
             }
 
             stateMachine.ChangeState(waterImpactState);
@@ -321,7 +319,7 @@ public class PlayerController : MonoBehaviour
     }
     public bool IsInWater()
     {
-        return waterSurfaceY.HasValue;
+        return isInWater && waterSurfaceY.HasValue;
     }
     
     /// <summary>

@@ -52,7 +52,7 @@ public class PushableBox : MonoBehaviour
             rb.mass = pushableMass;
         }
 
-        moveDirection = direction;
+        moveDirection = direction/2;
     }
 
     public void StopPush()

@@ -1153,11 +1153,10 @@ public class PlayerLadderExitBottomState : PlayerBaseState
 public class PlayerWaterImpactState : PlayerBaseState
 {
     private float impactSpeed;
-    private float maxDiveDepth = 2.5f; // 깊게 들어갈수록 현실감 ↑
+    private float maxDiveDepth = 2.5f;
     private float timer = 0f;
-    private float sinkDuration = 0.9f; // 잠기는 시간
-    private Vector3 startPos;
-    private Vector3 targetPos;
+    private float sinkDuration = 0.9f;
+    private bool forceApplied = false;
 
     public PlayerWaterImpactState(PlayerController player, PlayerStateMachine stateMachine)
         : base(player, stateMachine) { }
@@ -1165,33 +1164,29 @@ public class PlayerWaterImpactState : PlayerBaseState
     public override void Enter()
     {
         player.rb.useGravity = false;
+        player.rb.velocity = Vector3.zero;
 
         impactSpeed = Mathf.Abs(player.lastFallVelocity.y);
-        float diveDepth = Mathf.Clamp(impactSpeed * 0.1f, 0.8f, maxDiveDepth);
+        float diveForce = Mathf.Clamp(impactSpeed * 1.5f, 5f, 20f); 
 
-        startPos = player.transform.position;
-        targetPos = startPos - new Vector3(0, diveDepth, 0);
-
-        timer = 0f;
+        player.rb.AddForce(Vector3.down * diveForce, ForceMode.Impulse);
+        forceApplied = true;
 
         player.animator.CrossFade("Dive_under", 0.2f);
+        timer = 0f;
     }
 
     public override void Update()
     {
         timer += Time.deltaTime;
-        float t = Mathf.Clamp01(timer / sinkDuration);
-
-        player.transform.position = Vector3.Lerp(startPos, targetPos, t);
 
         if (timer >= sinkDuration)
         {
+            player.rb.velocity = Vector3.zero;
+
             if (player.waterSurfaceY.HasValue)
             {
                 bool isSubmerged = player.transform.position.y < player.waterSurfaceY.Value;
-                
-                Debug.Log(isSubmerged);
-                Debug.Log(player.transform.position.y);
                 if (isSubmerged)
                     stateMachine.ChangeState(player.underwaterSwimState);
                 else

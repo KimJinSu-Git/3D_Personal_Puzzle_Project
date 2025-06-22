@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Cinemachine;
 
@@ -37,7 +38,7 @@ public class BreakableTile : MonoBehaviour
             if (dustEffectPrefab != null)
             {
                 GameObject dust = Instantiate(dustEffectPrefab, transform.position, Quaternion.identity);
-                Destroy(dust, 3f);
+                Destroy(dust, 5f);
             }
 
             if (!hasShaken && sharedImpulseSource != null)
@@ -45,6 +46,24 @@ public class BreakableTile : MonoBehaviour
                 hasShaken = true;
                 sharedImpulseSource.GenerateImpulse();
             }
+            
         }
+    }
+
+    private void ResetTile()
+    {
+        hasBroken = false;
+        rb.isKinematic = true;
+        rb.useGravity = false;
+    }
+
+    private void OnEnable()
+    {
+        GameResetEvent.OnPlayerReset += ResetTile;
+    }
+
+    private void OnDisable()
+    {
+        GameResetEvent.OnPlayerReset -= ResetTile;
     }
 }
