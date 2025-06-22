@@ -30,6 +30,7 @@ public class PlayerController : MonoBehaviour
     public bool caughtDie = false;
 
     public bool isGrounded;
+    public bool allowWaterImpact = false;
     public bool isFacingRight = true;
     public Vector3 lastFallVelocity;
     [HideInInspector] public Transform currentLadder;
@@ -178,7 +179,6 @@ public class PlayerController : MonoBehaviour
     
         Vector3 topPoint = headCenter + Vector3.up * checkHeight;
 
-        // 머리 위에 충돌이 있으면 true
         return Physics.CheckCapsule(headCenter, topPoint, radius, LayerMask.GetMask("Default"));
     }
     
@@ -208,6 +208,9 @@ public class PlayerController : MonoBehaviour
         {
             isInWater = false;
             waterSurfaceY = null;
+            
+            if (drowningParticle != null)
+                drowningParticle.SetActive(false);
         }
     }
     
@@ -230,10 +233,19 @@ public class PlayerController : MonoBehaviour
             Collider waterCollider = other.GetComponent<Collider>();
             if (waterCollider != null)
             {
-                waterSurfaceY = waterCollider.bounds.max.y;
+                float surfaceY = waterCollider.bounds.max.y;
+                if (!waterSurfaceY.HasValue || Mathf.Abs(waterSurfaceY.Value - surfaceY) > 0.1f)
+                    waterSurfaceY = surfaceY;
             }
 
-            stateMachine.ChangeState(waterImpactState);
+            if (allowWaterImpact)
+            {
+                stateMachine.ChangeState(waterImpactState);
+            }
+            else
+            {
+                stateMachine.ChangeState(swimSurfaceState);
+            }
         }
     }
     

@@ -15,6 +15,7 @@ public class PushableBox : MonoBehaviour
     [SerializeField] private float fallingThreshold = -1.5f;
     
     private bool isFalling = false;
+    private Vector3 tempPos;
     
     private Rigidbody rb;
     private Vector3 moveDirection = Vector3.zero;
@@ -51,8 +52,12 @@ public class PushableBox : MonoBehaviour
             isBeingPushed = true;
             rb.mass = pushableMass;
         }
+        
+        tempPos = transform.position;
+        tempPos.x = 0;
+        transform.position = tempPos;
 
-        moveDirection = direction/2;
+        moveDirection = direction/4;
     }
 
     public void StopPush()

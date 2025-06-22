@@ -371,6 +371,7 @@ public class PlayerFallState : PlayerBaseState
         player.animator.Play("Jump_in_Place_Loop");
         playedExitAnim = false;
         exitAnimTimer = 0f;
+        player.allowWaterImpact = true;
         
         fallStartY = player.transform.position.y;
     }
@@ -827,6 +828,20 @@ public class PlayerPushBlendState : PlayerBaseState
         float target = Mathf.Abs(inputZ) > 0.1f ? 1f : 0f;
         float lerped = Mathf.Lerp(current, target, Time.deltaTime * 10f);
         player.animator.SetFloat(PushSpeed, lerped);
+        
+        if (Mathf.Abs(inputZ) > 0.1f)
+        {
+            int inputDir = inputZ > 0 ? 1 : -1;
+            int facingDir = player.isFacingRight ? 1 : -1;
+
+            if (inputDir != facingDir || pushableBoxTarget.CompareTag("FallingBox"))
+            {
+                pushableBoxTarget?.StopPush();
+                pushableDoorTarget?.StopPush();
+                stateMachine.ChangeState(player.pushExitState);
+                return;
+            }
+        }
 
         if (info.IsName("Push"))
         {
@@ -842,7 +857,6 @@ public class PlayerPushBlendState : PlayerBaseState
                 }
                 else
                 {
-                    Debug.Log("여긴가 ?");
                     pushableBoxTarget.StopPush();
                 }
             }
@@ -852,21 +866,11 @@ public class PlayerPushBlendState : PlayerBaseState
                 if (Mathf.Abs(inputZ) > 0.1f)
                 {
                     pushableDoorTarget.StartPushRotation(player.transform);
-                    
-                    if (isFacingRight)
-                    {
-                        Vector3 doorForward = pushableDoorTarget.transform.forward;
-                        doorForward.y = 0f; 
-                        Quaternion targetRot = Quaternion.LookRotation(doorForward, Vector3.up);
-                        player.visualRoot.rotation = Quaternion.Lerp(player.visualRoot.rotation, targetRot, Time.deltaTime * 4f);
-                    }
-                    else
-                    {
-                        Vector3 doorBackward = pushableDoorTarget.transform.forward * -1;
-                        doorBackward.y = 0f; 
-                        Quaternion targetRot = Quaternion.LookRotation(doorBackward, Vector3.up);
-                        player.visualRoot.rotation = Quaternion.Lerp(player.visualRoot.rotation, targetRot, Time.deltaTime * 4f);
-                    }
+
+                    Vector3 doorDir = isFacingRight ? pushableDoorTarget.transform.forward : -pushableDoorTarget.transform.forward;
+                    doorDir.y = 0f;
+                    Quaternion targetRot = Quaternion.LookRotation(doorDir, Vector3.up);
+                    player.visualRoot.rotation = Quaternion.Lerp(player.visualRoot.rotation, targetRot, Time.deltaTime * 4f);
                 }
                 else
                 {
@@ -889,10 +893,12 @@ public class PlayerPushBlendState : PlayerBaseState
                 pushableBoxTarget?.StopPush();
                 pushableDoorTarget?.StopPush();
                 stateMachine.ChangeState(player.pushExitState);
+                return;
             }
         }
 
-        if (!player.CheckPushableObject() && (pushableDoorTarget == null || !pushableDoorTarget.isBeingPushed))
+        if (!player.CheckPushableObject() && (pushableDoorTarget == null || !pushableDoorTarget.isBeingPushed)
+            && (pushableBoxTarget == null || !pushableBoxTarget.isBeingPushed))
         {
             Debug.Log("아님 여긴가 ?");
             pushableBoxTarget?.StopPush();
@@ -962,7 +968,6 @@ public class PlayerLadderEnterUpState : PlayerBaseState
         player.capsule.enabled = false;
         
         player.animator.Play("Ladder_Enter_Up");
-        // player.animator.SetTrigger(EnterLadderUp);
     }
 
     public override void Update()
@@ -1198,6 +1203,7 @@ public class PlayerWaterImpactState : PlayerBaseState
     public override void Exit()
     {
         player.rb.velocity = Vector3.zero;
+        player.allowWaterImpact = false;
     }
 }
 
