@@ -41,6 +41,8 @@ public class PlayerController : MonoBehaviour
     private float pushCheckDistance = 0.3f;
     private float yRotation;
     
+    private bool isInCutscene = false;
+    
     public bool isInWater = false;
     public float? waterSurfaceY = null;
     public float underwaterTime = 0f;
@@ -135,6 +137,8 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (isInCutscene) return;
+        
         stateMachine.Update();
         Debug.Log(stateMachine.CurrentState);
         isFacingCheck();
@@ -143,6 +147,21 @@ public class PlayerController : MonoBehaviour
         {
             stateMachine.ChangeState(deathState);
         }
+    }
+    
+    private void FixedUpdate()
+    {
+        if (isInCutscene)
+        {
+            rb.velocity = transform.forward * 2.5f;
+        }
+    }
+    
+    public void EnterCutsceneMode()
+    {
+        animator.CrossFade("Idle_Walk_Run", 0.1f);
+        isInCutscene = true;
+        rb.velocity = Vector3.zero;
     }
 
     private void isFacingCheck()
