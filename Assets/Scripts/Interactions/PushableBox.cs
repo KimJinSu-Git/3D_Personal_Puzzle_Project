@@ -11,6 +11,11 @@ public class PushableBox : MonoBehaviour
     
     public bool isBeingPushed = false;
     
+    [SerializeField] private string fallingTag = "FallingBox";
+    [SerializeField] private float fallingThreshold = -1.5f;
+    
+    private bool isFalling = false;
+    
     private Rigidbody rb;
     private Vector3 moveDirection = Vector3.zero;
     
@@ -26,11 +31,21 @@ public class PushableBox : MonoBehaviour
         {
             rb.MovePosition(rb.position + moveDirection);
         }
+        
+        if (!isFalling && rb.velocity.y < fallingThreshold)
+        {
+            isFalling = true;
+            gameObject.tag = fallingTag;
+        }
+        else if (isFalling && Mathf.Abs(rb.velocity.y) < 0.01f && rb.IsSleeping())
+        {
+            isFalling = false;
+            gameObject.tag = "Untagged";
+        }
     }
 
     public void StartPush(Vector3 direction)
     {
-        Debug.Log("StartPush");
         if (!isBeingPushed)
         {
             isBeingPushed = true;
@@ -42,7 +57,6 @@ public class PushableBox : MonoBehaviour
 
     public void StopPush()
     {
-        Debug.Log("StopPush");
         if (isBeingPushed)
         {
             isBeingPushed = false;
