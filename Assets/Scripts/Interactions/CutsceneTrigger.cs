@@ -8,7 +8,7 @@ using UnityEngine.Rendering.Universal;
 public class CutsceneTrigger : MonoBehaviour
 {
     [Header("Gate Open & Bloom")]
-    public Transform doorPivot; // 문 회전 축
+    public Transform doorPivot;
     public Volume brightGateVolume;
     
     public CinemachineVirtualCamera virtualCam;
@@ -31,14 +31,13 @@ public class CutsceneTrigger : MonoBehaviour
         PlayerController controller = player.GetComponent<PlayerController>();
         controller.EnterCutsceneMode();
 
-        // 1. 카메라 Follow 해제
         virtualCam.Follow = null;
 
         Vector3 startPos = virtualCam.transform.position;
         Quaternion startRot = virtualCam.transform.rotation;
         float startFOV = virtualCam.m_Lens.FieldOfView;
 
-        Vector3 targetPos = new Vector3(0f, 2f, startPos.z - 5f); // Z 값도 점점 뒤로
+        Vector3 targetPos = new Vector3(0f, 2f, startPos.z - 5f); 
         Quaternion targetRot = Quaternion.Euler(5f, 0f, 0f);
         float targetFOV = 30f;
 

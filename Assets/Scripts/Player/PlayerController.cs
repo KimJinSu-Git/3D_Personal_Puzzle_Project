@@ -4,9 +4,18 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
+public enum BreathState
+{
+    None,    
+    Slow,     
+    Fast      
+}
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
 {
+    private BreathState currentBreathState = BreathState.None;
+    private Coroutine breathCooldownCoroutine;
+    
     [Header("움직임 설정")]
     public float walkSpeed = 2f;
     public float runSpeed = 3f;
@@ -133,6 +142,9 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         stateMachine.Initialize(idleState);
+        SoundManager.Instance.PlayBGM("Background Ambient");
+        SoundManager.Instance.PlayBreath("Player_Breath_Slow");
+        currentBreathState = BreathState.Slow;
     }
 
     private void Update()
@@ -147,6 +159,17 @@ public class PlayerController : MonoBehaviour
         {
             stateMachine.ChangeState(deathState);
         }
+
+        if (underwaterTime >= 5f && underwaterTime <= 10f)
+        {
+            SoundManager.Instance.PlayBreath("Player_UnderWater_Breath");
+            if (drowningParticle != null)
+                drowningParticle.SetActive(true);
+        }
+        else if (underwaterTime >= 10f)
+        {
+            SoundManager.Instance.PlayBreath("Player_UnderWater_Death");
+        }
     }
     
     private void FixedUpdate()
@@ -155,6 +178,46 @@ public class PlayerController : MonoBehaviour
         {
             rb.velocity = transform.forward * 2f;
         }
+    }
+    
+    public void SetBreathState(BreathState newState)
+    {
+        if (currentBreathState == newState)
+            return;
+
+        currentBreathState = newState;
+
+        switch (newState)
+        {
+            case BreathState.None:
+                SoundManager.Instance.StopBreath();
+                break;
+            case BreathState.Slow:
+                SoundManager.Instance.PlayBreath("Player_Breath_Slow", true);
+                break;
+            case BreathState.Fast:
+                SoundManager.Instance.PlayBreath("Player_Breath_Fast", true);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 달리기를 멈췄을 때 일정 시간 뒤 Slow 상태로 천천히 숨 쉬기 전환
+    /// </summary>
+    public void StartBreathCooldown(float delay = 1f)
+    {
+        if (breathCooldownCoroutine != null)
+            StopCoroutine(breathCooldownCoroutine);
+    
+        breathCooldownCoroutine = StartCoroutine(BreathCooldownCoroutine(delay));
+    }
+
+    private IEnumerator BreathCooldownCoroutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (currentBreathState == BreathState.Fast)
+            SetBreathState(BreathState.Slow);
     }
     
     public void EnterCutsceneMode()
@@ -227,9 +290,12 @@ public class PlayerController : MonoBehaviour
         {
             isInWater = false;
             waterSurfaceY = null;
+            underwaterTime = 0f;
             
             if (drowningParticle != null)
                 drowningParticle.SetActive(false);
+            
+            SoundManager.Instance.PlayBGM("Background Ambient");
         }
     }
     

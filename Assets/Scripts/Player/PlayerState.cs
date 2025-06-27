@@ -44,6 +44,8 @@ public class PlayerIdleState : PlayerBaseState
         
         player.rb.velocity = new Vector3(0, player.rb.velocity.y, 0);
         player.animator.SetFloat(Speed, 0f);
+        
+        SoundManager.Instance.StopFootstep();
     }
 
     public override void Update()
@@ -121,6 +123,8 @@ public class PlayerMoveState : PlayerBaseState
 {
     private static readonly int Speed = Animator.StringToHash("Speed");
 
+    private string currentFootstepSFX = "";
+
     public PlayerMoveState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
 
     public override void Enter()
@@ -163,6 +167,17 @@ public class PlayerMoveState : PlayerBaseState
         {
             stateMachine.ChangeState(player.idleState);
             return;
+        }
+
+        if (isRunning)
+        {
+            player.SetBreathState(BreathState.Fast);
+            SoundManager.Instance.PlayFootstep("Player_Run");
+        }
+        else
+        {
+            player.StartBreathCooldown();
+            SoundManager.Instance.PlayFootstep("Player_Walk");
         }
 
         if (Input.GetButtonDown("Jump") && player.isGrounded)
@@ -217,6 +232,8 @@ public class PlayerMoveState : PlayerBaseState
     
     public override void Exit()
     {
+        player.StartBreathCooldown();
+        SoundManager.Instance.StopFootstep();
         PosReset();
     }
 }
@@ -322,6 +339,7 @@ public class PlayerJumpState : PlayerBaseState
         player.rb.velocity = new Vector3(player.rb.velocity.x, 0f, player.rb.velocity.z);
         player.rb.AddForce(Vector3.up * player.jumpForce, ForceMode.Impulse);
         
+        SoundManager.Instance.PlaySFX("Player_Jump");
     }
 
     public override void Update()
@@ -363,6 +381,8 @@ public class PlayerFallState : PlayerBaseState
     private float fallStartY;
     private float fallEndY;
     private float deathFallThreshold = 7f;
+    
+    private string currentLandSFX = "";
 
     public PlayerFallState(PlayerController player, PlayerStateMachine stateMachine) : base(player, stateMachine) { }
 
@@ -378,16 +398,22 @@ public class PlayerFallState : PlayerBaseState
 
     public override void Update()
     {
+        player.lastFallVelocity = player.rb.velocity;
+        
         if (player.IsInWater() && player.isInWater)
         {
-            player.lastFallVelocity = player.rb.velocity;
             stateMachine.ChangeState(player.waterImpactState);
             return;
         }
-        
+
         if (IsNearGround())
         {
             player.animator.Play("Jump_Exit");
+            if (currentLandSFX != "Player_Land")
+            {
+                SoundManager.Instance.PlaySFX("Player_Land");
+                currentLandSFX = "Player_Land";
+            }
             playedExitAnim = true;
         }
 
@@ -407,6 +433,7 @@ public class PlayerFallState : PlayerBaseState
     public override void Exit()
     {
         player.animator.Play("Idle_Walk_Run");
+        currentLandSFX = "";
     }
     
     private bool IsNearGround()
@@ -491,6 +518,8 @@ public class PlayerDeathState : PlayerBaseState
         player.isInWater = false;
         player.underwaterTime = 0f;
         player.SetStandingCollider(0.5f);
+        
+        SoundManager.Instance.PlayBreath("Player_Breath_Slow");
     }
 }
 
@@ -793,6 +822,8 @@ public class PlayerPushBlendState : PlayerBaseState
     private PushableBox pushableBoxTarget;
     private PushableDoor pushableDoorTarget;
     private bool isVisualRotatingBack = false;
+    
+    private string currentMoveBoxSFX = "";
 
     public PlayerPushBlendState(PlayerController player, PlayerStateMachine stateMachine)
         : base(player, stateMachine) { }
@@ -839,6 +870,8 @@ public class PlayerPushBlendState : PlayerBaseState
                 pushableBoxTarget?.StopPush();
                 pushableDoorTarget?.StopPush();
                 stateMachine.ChangeState(player.pushExitState);
+                SoundManager.Instance.StopLoopSFX();
+                currentMoveBoxSFX = "";
                 return;
             }
         }
@@ -854,10 +887,17 @@ public class PlayerPushBlendState : PlayerBaseState
                     Vector3 worldMove = player.transform.TransformDirection(localMove);
 
                     pushableBoxTarget.StartPush(worldMove);
+                    if (currentMoveBoxSFX != "Box_Move")
+                    {
+                        SoundManager.Instance.PlayLoopSFX("Box_Move");
+                        currentMoveBoxSFX = "Box_Move";
+                    }
                 }
                 else
                 {
                     pushableBoxTarget.StopPush();
+                    SoundManager.Instance.StopLoopSFX();
+                    currentMoveBoxSFX = "";
                 }
             }
 
@@ -1172,6 +1212,7 @@ public class PlayerWaterImpactState : PlayerBaseState
         player.rb.velocity = Vector3.zero;
 
         impactSpeed = Mathf.Abs(player.lastFallVelocity.y);
+        Debug.Log(impactSpeed);
         float diveForce = Mathf.Clamp(impactSpeed * 1.5f, 5f, 20f); 
 
         player.rb.AddForce(Vector3.down * diveForce, ForceMode.Impulse);
@@ -1179,6 +1220,16 @@ public class PlayerWaterImpactState : PlayerBaseState
 
         player.animator.CrossFade("Dive_under", 0.2f);
         timer = 0f;
+        
+        player.SetBreathState(BreathState.None);
+        if (impactSpeed > 12f)
+        {
+            SoundManager.Instance.PlaySFX("Player_Fall_Water_Deep");
+        }
+        else
+        {
+            SoundManager.Instance.PlaySFX("Player_Fall_Water_Low");
+        }
     }
 
     public override void Update()
@@ -1216,6 +1267,8 @@ public class PlayerSwimSurfaceState : PlayerBaseState
 
     private int lastFacingDirection = 1;
 
+    private string currentSwimSurfaceSFX = "";
+
     public PlayerSwimSurfaceState(PlayerController player, PlayerStateMachine stateMachine)
         : base(player, stateMachine) { }
 
@@ -1230,6 +1283,9 @@ public class PlayerSwimSurfaceState : PlayerBaseState
         currentSpeed = 0f;
         lastFacingDirection = player.isFacingRight ? 1 : -1;
         player.animator.Play("SwimSurface");
+        
+        SoundManager.Instance.PlayBGM("Background Ambient");
+        SoundManager.Instance.PlayBreath("Player_Breath_Slow");
     }
 
     public override void Update()
@@ -1251,6 +1307,17 @@ public class PlayerSwimSurfaceState : PlayerBaseState
                 stateMachine.ChangeState(player.swimTurnState);
                 return;
             }
+
+            if (currentSwimSurfaceSFX != "Player_SwimSurface")
+            {
+                SoundManager.Instance.PlayLoopSFX("Player_SwimSurface");
+                currentSwimSurfaceSFX = "Player_SwimSurface";
+            }
+        }
+        else
+        {
+            currentSwimSurfaceSFX = "";
+            SoundManager.Instance.StopLoopSFX();
         }
 
         if (Input.GetAxisRaw("Vertical") < -0.1f)
@@ -1271,6 +1338,9 @@ public class PlayerSwimSurfaceState : PlayerBaseState
     {
         player.animator.SetFloat(SwimSpeed, 0f);
         player.rb.velocity = Vector3.zero;
+        
+        currentSwimSurfaceSFX = "";
+        SoundManager.Instance.StopLoopSFX();
     }
 }
 
@@ -1332,15 +1402,14 @@ public class PlayerUnderwaterSwimState : PlayerBaseState
     private float blendSmoothTime = 5f;
     
     private const float surfaceBufferDistance = 0.05f;
+    
+    private string currentUnderwaterBGM = "";
 
     public PlayerUnderwaterSwimState(PlayerController player, PlayerStateMachine stateMachine)
         : base(player, stateMachine) { }
 
     public override void Enter()
     {
-        if (player.drowningParticle != null)
-            player.drowningParticle.SetActive(true);
-        
         player.rb.useGravity = false;
         
         player.animator.Play("SwimUnderwater");
@@ -1349,12 +1418,35 @@ public class PlayerUnderwaterSwimState : PlayerBaseState
         
         currentFwd = 0f;
         currentVert = 0f;
+        
+        SoundManager.Instance.PlayBGM("Under_Water_Low");
+        currentUnderwaterBGM = "Under_Water_Low";
+        
+        SoundManager.Instance.StopBreath();
     }
 
     public override void Update()
     {
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
+        
+        var depth = player.waterSurfaceY - player.transform.position.y;
+        if (depth > 2.5f)
+        {
+            if (currentUnderwaterBGM != "Under_Water_Deep")
+            {
+                SoundManager.Instance.PlayBGM("Under_Water_Deep");
+                currentUnderwaterBGM = "Under_Water_Deep";
+            }
+        }
+        else
+        {
+            if (currentUnderwaterBGM != "Under_Water_Low")
+            {
+                SoundManager.Instance.PlayBGM("Under_Water_Low");
+                currentUnderwaterBGM = "Under_Water_Low";
+            }
+        }
 
         if (horizontalInput != 0)
         {
@@ -1494,6 +1586,7 @@ public class PlayerDrowningState : PlayerBaseState
         player.underwaterTime = 0f;
         
         player.animator.Play("Idle_Walk_Run");
+        SoundManager.Instance.PlayBreath("Player_Breath_Slow");
     }
 }
 

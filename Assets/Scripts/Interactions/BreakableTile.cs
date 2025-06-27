@@ -34,6 +34,8 @@ public class BreakableTile : MonoBehaviour
             hasBroken = true;
             rb.isKinematic = false;
             rb.useGravity = true;
+            
+            SoundManager.Instance.PlaySFX("Box_Fall_Crash");
 
             if (dustEffectPrefab != null)
             {
