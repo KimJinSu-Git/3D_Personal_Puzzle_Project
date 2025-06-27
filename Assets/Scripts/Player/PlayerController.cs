@@ -37,6 +37,7 @@ public class PlayerController : MonoBehaviour
     public bool crouching = false;
     public bool crawling = false;
     public bool caughtDie = false;
+    public bool isDie = false;
 
     public bool isGrounded;
     public bool allowWaterImpact = false;

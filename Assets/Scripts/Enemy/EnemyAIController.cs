@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -12,6 +14,9 @@ public class EnemyAIController : MonoBehaviour
     public float returnSpeed = 1f;
     public float maxChaseDistance = 30f;
     public float catchDistance = 1f;
+    
+    [Header("협동 적 리스트")]
+    public List<EnemyAIController> linkedEnemies = new();
 
     [Header("애니메이션 및 잡기 처리")]
     public Animator animator;
@@ -21,6 +26,10 @@ public class EnemyAIController : MonoBehaviour
     public float vaultCheckDistance = 1.2f;
     public string vaultableTag = "Obstacle";
     public float vaultResumeDelay = 1.0f;
+    
+    [Header("사운드")]
+    [SerializeField] private AudioSource sfxSource;
+    [SerializeField] private AudioClip chaseClip;
     
     [Header("좁은 통로 감지 설정")]
     public Transform headTransform;
@@ -64,6 +73,15 @@ public class EnemyAIController : MonoBehaviour
         targetCollider = new Vector3(0, 1.27f, 0);
     }
 
+    private void Start()
+    {
+        linkedEnemies = new List<EnemyAIController>(
+            GameObject.FindGameObjectsWithTag("Enemy")
+                .Select(go => go.GetComponent<EnemyAIController>())
+                .Where(e => e != null && e != this && Vector3.Distance(transform.position, e.transform.position) <= 10f)
+        );
+    }
+
     private void Update()
     {
         info = animator.GetCurrentAnimatorStateInfo(0);
@@ -89,15 +107,44 @@ public class EnemyAIController : MonoBehaviour
                 break;
         }
     }
+    
+    private void PlayChaseSFX()
+    {
+        // if (!sfxSource.isPlaying)
+        // {
+        //     sfxSource.clip = chaseClip;
+        //     sfxSource.loop = true;
+        //     sfxSource.Play();
+        // }
+        SoundManager.Instance.PlayEnemySFX("Enemy_Chase");
+    }
+
+    private void StopChaseSFX()
+    {
+        // if (sfxSource.isPlaying)
+        // {
+        //     sfxSource.Stop();
+        // }
+        SoundManager.Instance.StopEnemySFX();
+    }
 
     public void OnPlayerDetected(PlayerController player)
     {
         if (currentState == GuardState.Catching || isFailed) return;
+        if (currentState == GuardState.Chasing && targetPlayer == player) return;
 
         targetPlayer = player;
         agent.speed = chaseSpeed;
         ChangeState(GuardState.Chasing);
         Debug.Log("Guard: 플레이어 감지, 추격 시작");
+        
+        foreach (var friend in linkedEnemies)
+        {
+            if (friend != null)
+            {
+                friend.OnPlayerDetected(player);
+            }
+        }
     }
 
     private void ChangeState(GuardState newState)
@@ -110,17 +157,20 @@ public class EnemyAIController : MonoBehaviour
                 rb.isKinematic = true;
                 agent.speed = 0f;
                 animator.Play("Idle");
+                StopChaseSFX();
                 break;
             case GuardState.Chasing:
                 agent.isStopped = false;
                 agent.speed = chaseSpeed;
                 animator.Play("Run");
+                PlayChaseSFX();
                 break;
             case GuardState.Catching:
                 rb.isKinematic = false;
                 collider.center = targetCollider;
                 agent.isStopped = true;
                 animator.Play("Plunge");
+                StopChaseSFX();
                 if (targetPlayer != null && !targetPlayer.caughtDie)
                 {
                     targetPlayer.transform.SetParent(catchHandTransform);
@@ -134,13 +184,14 @@ public class EnemyAIController : MonoBehaviour
                 agent.isStopped = false;
                 targetPlayer = null;
                 animator.Play("Walk");
+                StopChaseSFX();
                 break;
         }
     }
 
     private void ChasePlayer()
     {
-        if (targetPlayer == null)
+        if (targetPlayer ==null || targetPlayer.isDie)
         {
             ChangeState(GuardState.Returning);
             return;

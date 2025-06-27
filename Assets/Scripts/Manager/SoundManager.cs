@@ -137,7 +137,17 @@ public class SoundManager : MonoBehaviour
     {
         if (sfxDict.TryGetValue(name, out var clip))
         {
+            if (enemySfxSource.isPlaying && enemySfxSource.clip == clip) return;
+            enemySfxSource.clip = clip;
+            enemySfxSource.loop = true;
+            enemySfxSource.Play();
             enemySfxSource.PlayOneShot(clip);
         }
+    }
+
+    public void StopEnemySFX()
+    {
+        if (enemySfxSource.isPlaying)
+            enemySfxSource.Stop();
     }
 }

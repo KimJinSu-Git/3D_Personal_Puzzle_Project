@@ -8,6 +8,7 @@ TagManager:
   - Obstacle
   - Obstacle_Head
   - FallingBox
+  - Enemy
   layers:
   - Default
   - TransparentFX

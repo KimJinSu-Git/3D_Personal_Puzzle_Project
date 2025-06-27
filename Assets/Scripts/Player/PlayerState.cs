@@ -494,6 +494,7 @@ public class PlayerDeathState : PlayerBaseState
         player.rb.velocity = Vector3.zero;
         deathTimer = 0f;
         respawned = false;
+        player.isDie = true;
     }
 
     public override void Update()
@@ -518,6 +519,7 @@ public class PlayerDeathState : PlayerBaseState
         player.isInWater = false;
         player.underwaterTime = 0f;
         player.SetStandingCollider(0.5f);
+        player.isDie = true;
         
         SoundManager.Instance.PlayBreath("Player_Breath_Slow");
     }
@@ -1123,6 +1125,17 @@ public class PlayerLadderClimbState : PlayerBaseState
         player.animator.SetFloat(LadderSpeed, lerped);
         player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
 
+        if (inputY != 0f)
+        {
+            SoundManager.Instance.loopSfxSource.volume = 1f;
+            SoundManager.Instance.PlayLoopSFX("Player_Climb_Ladder");
+        }
+        else
+        {
+            SoundManager.Instance.loopSfxSource.volume = 0.5f;
+            SoundManager.Instance.StopLoopSFX();
+        }
+
         if (inputY < -0.1f && player.CheckLadderBottom())
         {
             stateMachine.ChangeState(player.ladderExitBottomState);
@@ -1140,6 +1153,9 @@ public class PlayerLadderClimbState : PlayerBaseState
         player.animator.SetFloat(LadderSpeed, 0f);
         player.transform.rotation = Quaternion.LookRotation(-player.currentLadder.forward);
         player.animator.applyRootMotion = false;
+        
+        SoundManager.Instance.loopSfxSource.volume = 0.5f;
+        SoundManager.Instance.StopLoopSFX();
     }
 }
 
@@ -1581,6 +1597,8 @@ public class PlayerDrowningState : PlayerBaseState
 
         player.animator.SetTrigger(Drowning);
         timer = 0f;
+
+        player.isDie = true;
     }
 
     public override void Update()
@@ -1601,6 +1619,7 @@ public class PlayerDrowningState : PlayerBaseState
         player.waterSurfaceY = null;
         player.isInWater = false;
         player.underwaterTime = 0f;
+        player.isDie = false;
         
         player.animator.Play("Idle_Walk_Run");
         SoundManager.Instance.PlayBreath("Player_Breath_Slow");
@@ -1634,7 +1653,9 @@ public class PlayerLeverState : PlayerBaseState
         {
             player.animator.Play("Lever_Wall_Pull");
         }
-        
+
+        SoundManager.Instance.sfxSource.pitch = 0.5f;
+        SoundManager.Instance.PlaySFX("Lever_Move");
         lever.StartLeverRotation();
         hasStarted = true;
     }
@@ -1651,6 +1672,6 @@ public class PlayerLeverState : PlayerBaseState
 
     public override void Exit()
     {
-        
+        SoundManager.Instance.sfxSource.pitch = 1f;
     }
 }
