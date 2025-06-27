@@ -10,7 +10,7 @@ public class TrapController : MonoBehaviour
     [SerializeField] private SkinnedMeshRenderer skinnedMeshRenderer;
     
     private PlayerController playerController;
-    
+
     private void OnEnable()
     {
         GameResetEvent.OnPlayerReset += ResetMaterial;
@@ -28,6 +28,7 @@ public class TrapController : MonoBehaviour
             playerController.stateMachine.ChangeState(playerController.deathState);
 
             skinnedMeshRenderer.material = dieMaterial;
+            SoundManager.Instance.PlaySFX("Player_Trap_Death");
         }
     }
 

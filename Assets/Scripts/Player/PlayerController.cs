@@ -296,6 +296,7 @@ public class PlayerController : MonoBehaviour
                 drowningParticle.SetActive(false);
             
             SoundManager.Instance.PlayBGM("Background Ambient");
+            SoundManager.Instance.PlayBreath("Player_Breath_Slow");
         }
     }
     

@@ -65,8 +65,10 @@ public class PlayerRespawnManager : MonoBehaviour
     {
         savedObjectTransforms.Clear();
 
-        foreach (Transform child in respawnObjectGroup)
+        foreach (Transform child in respawnObjectGroup.GetComponentsInChildren<Transform>())
         {
+            if (child == respawnObjectGroup) continue;
+
             savedObjectTransforms[child] = new TransformData(child.position, child.rotation);
         }
     }
@@ -75,6 +77,8 @@ public class PlayerRespawnManager : MonoBehaviour
     {
         foreach (var kvp in savedObjectTransforms)
         {
+            if (kvp.Key == null) continue; 
+
             kvp.Key.position = kvp.Value.position;
             kvp.Key.rotation = kvp.Value.rotation;
         }

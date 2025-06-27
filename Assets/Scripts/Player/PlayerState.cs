@@ -753,6 +753,15 @@ public class PlayerCrawlBlendState : PlayerBaseState
         float crawlSpeed = player.walkSpeed * 0.6f;
         player.rb.velocity = new Vector3(0, player.rb.velocity.y, inputZ * crawlSpeed);
 
+        if (inputZ != 0f)
+        {
+            SoundManager.Instance.PlayLoopSFX("Player_Crawling");
+        }
+        else
+        {
+            SoundManager.Instance.StopLoopSFX();
+        }
+
         if (Input.GetKeyDown(KeyCode.X))
         {
             if (!player.IsHeadBlocked())
@@ -767,6 +776,11 @@ public class PlayerCrawlBlendState : PlayerBaseState
             }
             
         }
+    }
+
+    public override void Exit()
+    {
+        SoundManager.Instance.StopLoopSFX();
     }
 }
 
@@ -865,7 +879,7 @@ public class PlayerPushBlendState : PlayerBaseState
             int inputDir = inputZ > 0 ? 1 : -1;
             int facingDir = player.isFacingRight ? 1 : -1;
 
-            if (inputDir != facingDir || pushableBoxTarget.CompareTag("FallingBox"))
+            if (inputDir != facingDir || (pushableBoxTarget != null && pushableBoxTarget.CompareTag("FallingBox")))
             {
                 pushableBoxTarget?.StopPush();
                 pushableDoorTarget?.StopPush();
@@ -961,6 +975,9 @@ public class PlayerPushBlendState : PlayerBaseState
 
         pushableBoxTarget = null;
         pushableDoorTarget = null;
+        
+        SoundManager.Instance.StopLoopSFX();
+        currentMoveBoxSFX = "";
     }
 }
 

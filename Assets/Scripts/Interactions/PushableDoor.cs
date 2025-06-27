@@ -93,11 +93,13 @@ public class PushableDoor : MonoBehaviour
                 if (condition == null || !condition.IsUnlocked())
                 {
                     Debug.Log("아직 모든 조건이 만족되지 않아 문을 밀 수 없습니다.");
+                    SoundManager.Instance.PlayLoopSFX("Door_Locked");
                     return;
                 }
             }
         }
         
+        SoundManager.Instance.PlayLoopSFX("Door_Open");
         isBeingPushed = true;
         closeTimer = 0f;
         pushingPlayer = player;
@@ -112,5 +114,6 @@ public class PushableDoor : MonoBehaviour
     public void StopPush()
     {
         isBeingPushed = false;
+        SoundManager.Instance.StopLoopSFX();
     }
 }
