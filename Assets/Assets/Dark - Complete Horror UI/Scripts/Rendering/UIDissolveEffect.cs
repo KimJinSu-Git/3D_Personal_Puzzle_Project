@@ -219,7 +219,7 @@ namespace Michsky.UI.Dark
         {
             while (location >= 0)
             {
-                location -= Time.deltaTime * animationSpeed;
+                location -= Time.unscaledDeltaTime * animationSpeed;
 
                 if (location == 0 || location <= 0)
                     StopCoroutine("AnimateDissolveIn");
@@ -232,7 +232,7 @@ namespace Michsky.UI.Dark
         {
             while (location <= 1)
             {
-                location += Time.deltaTime * animationSpeed;
+                location += Time.unscaledDeltaTime * animationSpeed;
                 
                 if (location == 1 || location >= 1)
                     StopCoroutine("AnimateDissolveIn");

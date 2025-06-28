@@ -86,7 +86,7 @@ namespace Michsky.UI.Dark
 
         IEnumerator DisableModal()
         {
-            yield return new WaitForSeconds(disableAfter);
+            yield return new WaitForSecondsRealtime(disableAfter);
             gameObject.SetActive(false);
         }
     }

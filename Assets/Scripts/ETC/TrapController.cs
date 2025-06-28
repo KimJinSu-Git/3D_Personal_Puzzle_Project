@@ -8,6 +8,8 @@ public class TrapController : MonoBehaviour
     [SerializeField] private Material originalMaterial;
     [SerializeField] private Material dieMaterial;
     [SerializeField] private SkinnedMeshRenderer skinnedMeshRenderer;
+    [SerializeField] private GameObject pauseUI;
+    [SerializeField] private AudioSource trapAudioSource;
     
     private PlayerController playerController;
 
@@ -20,6 +22,19 @@ public class TrapController : MonoBehaviour
     {
         GameResetEvent.OnPlayerReset -= ResetMaterial;
     }
+
+    private void Update()
+    {
+        if (pauseUI.activeSelf)
+        {
+            trapAudioSource.Pause();
+        }
+        else
+        {
+            trapAudioSource.UnPause();
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.layer == LayerMask.NameToLayer("Player"))

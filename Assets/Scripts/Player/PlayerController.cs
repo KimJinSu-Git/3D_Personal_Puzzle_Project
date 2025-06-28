@@ -57,6 +57,8 @@ public class PlayerController : MonoBehaviour
     public float? waterSurfaceY = null;
     public float underwaterTime = 0f;
     public float maxUnderwaterTime = 10f;
+
+    [SerializeField] private GameObject pauseUI;
     
     /// <summary>
     /// 상태 종류들
@@ -150,7 +152,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if (isInCutscene) return;
+        if (isInCutscene || pauseUI.activeSelf) return;
         
         stateMachine.Update();
         Debug.Log(stateMachine.CurrentState);
@@ -172,7 +174,21 @@ public class PlayerController : MonoBehaviour
             SoundManager.Instance.PlayBreath("Player_UnderWater_Death");
         }
     }
-    
+
+    private void LateUpdate()
+    {
+        if (pauseUI.activeSelf)
+        {
+            SoundManager.Instance.PauseAllExceptBGM();
+            Time.timeScale = 0;
+        }
+        else
+        {
+            SoundManager.Instance.ResumePausedSFX();
+            Time.timeScale = 1;
+        }
+    }
+
     private void FixedUpdate()
     {
         if (isInCutscene)

@@ -14,7 +14,6 @@ public class CutsceneTrigger : MonoBehaviour
     public CinemachineVirtualCamera virtualCam;
     public Transform player;
     public CanvasGroup clearUI;
-    public string titleSceneName = "TitleScene";
 
     private bool triggered = false;
 
@@ -103,6 +102,6 @@ public class CutsceneTrigger : MonoBehaviour
         clearUI.blocksRaycasts = true;
 
         yield return new WaitForSeconds(2f);
-        SceneManager.LoadScene(titleSceneName);
+        SceneManager.LoadScene(0);
     }
 }

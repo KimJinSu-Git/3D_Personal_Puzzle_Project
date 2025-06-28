@@ -495,6 +495,8 @@ public class PlayerDeathState : PlayerBaseState
         deathTimer = 0f;
         respawned = false;
         player.isDie = true;
+        
+        SoundManager.Instance.StopBreath();
     }
 
     public override void Update()
@@ -581,7 +583,7 @@ public class PlayerCrouchToggleState : PlayerBaseState
         {
             player.skirtPos.transform.localPosition = new Vector3(0.1488715f, 0.12f, 0.01021058f);
             player.skirtPos.transform.localScale = new Vector3(0.9999992f, 1.5f, 1);
-            if (stateInfo.normalizedTime >= 0.80f)
+            if (stateInfo.normalizedTime >= 0.70f)
             {
                 player.crouching = true;
                 stateMachine.ChangeState(player.crouchBlendState);
@@ -903,11 +905,9 @@ public class PlayerPushBlendState : PlayerBaseState
                     Vector3 worldMove = player.transform.TransformDirection(localMove);
 
                     pushableBoxTarget.StartPush(worldMove);
-                    if (currentMoveBoxSFX != "Box_Move")
-                    {
-                        SoundManager.Instance.PlayLoopSFX("Box_Move");
-                        currentMoveBoxSFX = "Box_Move";
-                    }
+
+                    SoundManager.Instance.PlayLoopSFX("Box_Move");
+                    currentMoveBoxSFX = "Box_Move";
                 }
                 else
                 {

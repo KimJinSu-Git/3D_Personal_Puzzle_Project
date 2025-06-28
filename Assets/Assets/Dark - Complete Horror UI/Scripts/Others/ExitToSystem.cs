@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Michsky.UI.Dark
 {
@@ -8,6 +9,11 @@ namespace Michsky.UI.Dark
         {
             Debug.Log("Exit method is working in builds.");
             Application.Quit();
+        }
+
+        public void GoToMainMenu()
+        {
+            SceneManager.LoadScene(0);
         }
     }
 }
