@@ -18,5 +18,5 @@ MonoBehaviour:
   toughness: 5
   agression: 0
   attackSpeed: 0.5
-  territorial: 0
+  territorial: 1
   stealthy: 0
