@@ -32,6 +32,7 @@ public class PlayerController : MonoBehaviour
     
     [Header("파티클 시스템")]
     public GameObject drowningParticle;
+    public GameObject bloodParticle;
 
     [Header("플레이어 감지 체크 요소")] 
     public bool crouching = false;
@@ -39,6 +40,7 @@ public class PlayerController : MonoBehaviour
     public bool caughtDie = false;
     public bool isDie = false;
 
+    public bool gunDrowning = false;
     public bool isGrounded;
     public bool allowWaterImpact = false;
     public bool isFacingRight = true;

@@ -1606,6 +1606,14 @@ public class PlayerDrowningState : PlayerBaseState
         timer = 0f;
 
         player.isDie = true;
+
+        if (player.gunDrowning)
+        {
+            if (player.bloodParticle != null)
+            {
+                player.bloodParticle.SetActive(true);
+            }
+        }
     }
 
     public override void Update()
@@ -1629,6 +1637,12 @@ public class PlayerDrowningState : PlayerBaseState
         player.isInWater = false;
         player.underwaterTime = 0f;
         player.isDie = false;
+        player.gunDrowning = false;
+        
+        if (player.bloodParticle != null)
+        {
+            player.bloodParticle.SetActive(false);
+        }
         
         player.animator.Play("Idle_Walk_Run");
         SoundManager.Instance.PlayBreath("Player_Breath_Slow");

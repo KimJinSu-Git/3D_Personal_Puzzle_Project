@@ -68,18 +68,15 @@ public class PatrolShooter : MonoBehaviour
         animator.Play("Aim_Enter");
         yield return new WaitForSeconds(animator.GetCurrentAnimatorStateInfo(0).length);
 
-        // Aim_Shoot + 총알 발사
         animator.Play("Aim_Shoot");
-        // SoundManager에서 총 쏘는 사운드 추가
         SoundManager.Instance.PlaySFX("HandGun_Shoot");
+        player.gunDrowning = true;
         player.stateMachine.ChangeState(player.drowningState);
         yield return new WaitForSeconds(animator.GetCurrentAnimatorStateInfo(0).length);
 
-        // Aim_Exit
         animator.Play("Aim_Exit");
         yield return new WaitForSeconds(animator.GetCurrentAnimatorStateInfo(0).length);
 
-        // 멈춘 상태 유지
         animator.Play("Idle");
     }
     

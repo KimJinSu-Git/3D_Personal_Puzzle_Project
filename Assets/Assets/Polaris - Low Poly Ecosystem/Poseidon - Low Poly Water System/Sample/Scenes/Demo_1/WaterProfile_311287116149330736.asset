@@ -198,7 +198,7 @@ MonoBehaviour:
   slopeFoamStrength: 0
   slopeFoamFlowSpeed: 0
   slopeFoamDistance: 0
-  rippleHeight: 0.05
+  rippleHeight: 0.668
   rippleSpeed: 5
   rippleNoiseScale: 1
   enableWave: 1
