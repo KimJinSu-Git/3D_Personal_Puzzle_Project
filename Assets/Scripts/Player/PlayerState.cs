@@ -402,7 +402,14 @@ public class PlayerFallState : PlayerBaseState
         
         if (player.IsInWater() && player.isInWater)
         {
-            stateMachine.ChangeState(player.waterImpactState);
+            if (player.lastFallVelocity.y > 6f)
+            {
+                stateMachine.ChangeState(player.waterImpactState);
+            }
+            else
+            {
+                stateMachine.ChangeState(player.swimSurfaceState);
+            }
             return;
         }
 
@@ -1607,6 +1614,8 @@ public class PlayerDrowningState : PlayerBaseState
 
         if (timer >= respawnDelay)
         {
+            GameResetEvent.BroadcastPlayerReset();
+            SoundManager.Instance.StopEnemySFX();
             RespawnPlayer();
         }
     }

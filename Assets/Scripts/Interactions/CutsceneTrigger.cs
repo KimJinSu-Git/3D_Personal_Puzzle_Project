@@ -65,6 +65,8 @@ public class CutsceneTrigger : MonoBehaviour
         profile.TryGet(out Bloom bloom);
         float bloomStart = 0.5f;
         float bloomTarget = 3f;
+        
+        SoundManager.Instance.PlaySFX("Door_Open");
 
         while (effectElapsed < effectLerpDuration)
         {

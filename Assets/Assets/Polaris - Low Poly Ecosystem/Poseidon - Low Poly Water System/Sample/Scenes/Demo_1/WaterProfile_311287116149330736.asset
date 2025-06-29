@@ -186,8 +186,8 @@ MonoBehaviour:
   enableLightAbsorption: 1
   depthColor: {r: 0.41960785, g: 0.54509807, b: 0.7735849, a: 1}
   maxDepth: 29.77
-  enableFoam: 1
-  foamColor: {r: 1, g: 1, b: 1, a: 1}
+  enableFoam: 0
+  foamColor: {r: 0.745283, g: 0.745283, b: 0.745283, a: 1}
   foamDistance: 1
   enableFoamHQ: 1
   foamNoiseScaleHQ: 1

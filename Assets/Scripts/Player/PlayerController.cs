@@ -241,6 +241,7 @@ public class PlayerController : MonoBehaviour
     {
         animator.CrossFade("Idle_Walk_Run", 0.1f);
         isInCutscene = true;
+        SoundManager.Instance.StopBreath();
         rb.velocity = Vector3.zero;
     }
 
@@ -341,7 +342,7 @@ public class PlayerController : MonoBehaviour
                     waterSurfaceY = surfaceY;
             }
 
-            if (allowWaterImpact)
+            if (allowWaterImpact && lastFallVelocity.y > 6f)
             {
                 stateMachine.ChangeState(waterImpactState);
             }
