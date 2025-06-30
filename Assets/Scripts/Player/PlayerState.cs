@@ -400,14 +400,18 @@ public class PlayerFallState : PlayerBaseState
     {
         player.lastFallVelocity = player.rb.velocity;
         
+        Debug.Log("FallState : " + player.lastFallVelocity);
+        
         if (player.IsInWater() && player.isInWater)
         {
             if (player.lastFallVelocity.y > 6f)
             {
+                Debug.Log("FallState : waterImpact 실행 ?");
                 stateMachine.ChangeState(player.waterImpactState);
             }
             else
             {
+                Debug.Log("FallState : surface 실행 ?");
                 stateMachine.ChangeState(player.swimSurfaceState);
             }
             return;
@@ -1253,7 +1257,7 @@ public class PlayerWaterImpactState : PlayerBaseState
 
         impactSpeed = Mathf.Abs(player.lastFallVelocity.y);
         Debug.Log(impactSpeed);
-        float diveForce = Mathf.Clamp(impactSpeed * 1.5f, 5f, 20f); 
+        float diveForce = Mathf.Clamp(impactSpeed * 1.5f, 5f, 10f); 
 
         player.rb.AddForce(Vector3.down * diveForce, ForceMode.Impulse);
         forceApplied = true;

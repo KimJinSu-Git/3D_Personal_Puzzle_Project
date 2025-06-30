@@ -343,13 +343,17 @@ public class PlayerController : MonoBehaviour
                 if (!waterSurfaceY.HasValue || Mathf.Abs(waterSurfaceY.Value - surfaceY) > 0.1f)
                     waterSurfaceY = surfaceY;
             }
+            
+            Debug.Log("PlayerController : " + lastFallVelocity);
 
-            if (allowWaterImpact && lastFallVelocity.y > 6f)
+            if (allowWaterImpact && lastFallVelocity.y < -6f)
             {
+                Debug.Log("PlayerController : waterImpact 실행 ?");
                 stateMachine.ChangeState(waterImpactState);
             }
             else
             {
+                Debug.Log("PlayerController : swimSurface 실행 ?");
                 stateMachine.ChangeState(swimSurfaceState);
             }
         }
