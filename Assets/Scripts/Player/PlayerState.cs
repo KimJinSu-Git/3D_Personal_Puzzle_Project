@@ -500,7 +500,7 @@ public class PlayerDeathState : PlayerBaseState
         else
         {
             player.capsule.direction = 1;
-            player.rb.freezeRotation = false; // 나중에 y는 잠궈주자.
+            player.rb.constraints = RigidbodyConstraints.FreezeRotationY;
         }
         player.rb.velocity = Vector3.zero;
         deathTimer = 0f;
@@ -525,14 +525,14 @@ public class PlayerDeathState : PlayerBaseState
     public override void Exit()
     {
         player.transform.localRotation = Quaternion.Euler(0, 0, 0);
-        player.rb.freezeRotation = true;
+        player.rb.constraints = RigidbodyConstraints.FreezeRotation;
         player.caughtDie = false;
         player.animator.ResetTrigger(DeathFwd);
         player.waterSurfaceY = null;
         player.isInWater = false;
         player.underwaterTime = 0f;
         player.SetStandingCollider(0.5f);
-        player.isDie = true;
+        player.isDie = false;
         
         SoundManager.Instance.PlayBreath("Player_Breath_Slow");
     }

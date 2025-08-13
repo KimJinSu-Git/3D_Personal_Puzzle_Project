@@ -122,19 +122,19 @@ public class PatrolShooter : MonoBehaviour
         }
     }
 
-    public void ResetEnemy()
+    public void ResetShooterEnemy()
     {
         ChangeState(GunnerState.Patrol);
     }
     
     private void OnEnable()
     {
-        GameResetEvent.OnPlayerReset += ResetEnemy;
+        GameResetEvent.OnPlayerReset += ResetShooterEnemy;
     }
 
     private void OnDisable()
     {
-        GameResetEvent.OnPlayerReset -= ResetEnemy;
+        GameResetEvent.OnPlayerReset -= ResetShooterEnemy;
     }
 
 }

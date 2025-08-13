@@ -5,7 +5,7 @@ public class SoundManager : MonoBehaviour
 {
     public static SoundManager Instance;
 
-    [Header("🔊 Audio Sources")]
+    [Header("Audio Sources")]
     public AudioSource bgmSource;
     public AudioSource sfxSource;
     public AudioSource loopSfxSource;
@@ -13,7 +13,7 @@ public class SoundManager : MonoBehaviour
     public AudioSource footstepSource;
     public AudioSource enemySfxSource;
 
-    [Header("🎵 Audio Clips")]
+    [Header("Audio Clips")]
     public List<AudioClip> bgmClips;
     public List<AudioClip> sfxClips;
 

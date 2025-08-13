@@ -55,6 +55,7 @@ public class BreakableTile : MonoBehaviour
     private void ResetTile()
     {
         hasBroken = false;
+        hasShaken = false;
         rb.isKinematic = true;
         rb.useGravity = false;
     }
