@@ -8,7 +8,7 @@ ___
 🔑 주요 구현 요소
 * **플레이어 FSM**
   * Idle, Move, Crouch, Crawl, Jump, Push, Swim, Ladder, Death 등 세분화된 상태 구현
-  * 플레이어 상태에 따라 Collider 크기 변경 👉 [PlayerController.cs](https://github.com/KimJinSu-Git/3D_Personal_Puzzle_Project/blob/main/Assets/Scripts/Player/PlayerController.cs)
+  * 플레이어 상태에 따라 Collider 크기 변경 👉 [PlayerController.cs](https://github.com/KimJinSu-Git/3D_Personal_Puzzle_Project/blob/main/Assets/Scripts/Player/PlayerController.cs#L256)
 * **수영 시스템**
   * 수면/수중 상태 분리
   * 수중에 오래 잠수해 있을 경우 익사 처리
@@ -16,7 +16,7 @@ ___
   * Push 오브젝트 밀기, Lever 조작, 사다리 오르내리기
 * **적 AI & 감지**
   * Spotlight 감지 시스템
-  * 플레이어 상태(crouch/crawl/swim)에 따른 감지 여부 판별 👉 [SpotlightDetector.cs](https://github.com/KimJinSu-Git/3D_Personal_Puzzle_Project/blob/main/Assets/Scripts/Enemy/SpotlightDetector.cs)
+  * 플레이어 상태(crouch/crawl/swim)에 따른 감지 여부 판별 👉 [SpotlightDetector.cs](https://github.com/KimJinSu-Git/3D_Personal_Puzzle_Project/blob/main/Assets/Scripts/Enemy/SpotlightDetector.cs#L39)
   * 감지 시 추격 or 공격 패턴 실행
 * **사망 처리**
   * 사망 후 일정 시간 경과 시 GameResetEvent 호출
