@@ -1,9 +1,16 @@
-# 🎮 Unity Inside 스타일 3D 퍼즐 플랫포머
+# 🎮 Unity 3D 퍼즐 플랫포머
 🛠 개발 도구: Unity(C#), JetBrains Rider <br/>
 📆 개발 기간: 25.06.09 ~ 25.06.22 (약 2주) <br/>
 ___
 `Inside` 스타일의 3D 퍼즐 플랫포머를 목표로, **플레이어 상태 시스템, 수영·레버·사다리 상호작용, 적 AI 감지** 등의 퍼즐 메카닉을 구현했습니다. <br/>
 몰입감 있는 연출과 퍼즐 상호작용의 흐름을 설계하는 데 집중하고자 하였습니다. <br/>
+___
+📸 **인게임 이미지**
+<p align="center">
+  <img src="https://github.com/KimJinSu-Git/3D_Personal_Puzzle_Project/blob/main/Assets/ScreenShots/Image1.PNG" width="400"/> &nbsp; &nbsp;
+  <img src="https://github.com/KimJinSu-Git/3D_Personal_Puzzle_Project/blob/main/Assets/ScreenShots/Image2.PNG" width="375"/>
+</p>
+
 ___
 🔑 주요 구현 요소
 * **플레이어 FSM**
